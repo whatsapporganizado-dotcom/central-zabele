@@ -420,6 +420,14 @@ function apagarTarefa(id){
   if(!confirm('Apagar essa tarefa (e as etapas dela, se tiver)? Não tem como desfazer.')) return;
   db.ref('tarefas/'+id).remove();
 }
+function editarTarefa(id){
+  const atual = (tarefasCache[id] && tarefasCache[id].titulo) || '';
+  const novo = prompt('Editar título da tarefa:', atual);
+  if(novo === null) return;
+  const limpo = novo.trim();
+  if(!limpo) return;
+  db.ref('tarefas/'+id+'/titulo').set(limpo);
+}
 function toggleSub(tid, sid, atual){ db.ref('tarefas/'+tid+'/subitens/'+sid+'/feita').set(!atual); }
 let etapaTarefaId = null;
 function addEtapa(tid, tipo){
@@ -613,9 +621,11 @@ async function salvarEtapaEvento(){
   db.ref('tarefas/'+etapaTarefaId+'/subitens').push(novo);
   closeModal('m-etapa-evento');
 }
+let tarefasCache = {};
 db.ref('tarefas').on('value', snap=>{
   const wrap = document.getElementById('lista-tarefas');
   const data = snap.val();
+  tarefasCache = data || {};
   if(!data){ wrap.innerHTML = '<p class="empty">Nenhuma tarefa ainda</p>'; atualizarPills(); return; }
   let html='';
   Object.entries(data).sort((a,b)=>(b[1].criadoEm||0)-(a[1].criadoEm||0)).forEach(([id,t])=>{
@@ -638,6 +648,7 @@ db.ref('tarefas').on('value', snap=>{
       <div class="top"><input type="checkbox" ${t.feita?'checked':''} onclick="toggleTarefa('${id}',${t.feita})">
       <div class="title">${t.titulo}</div>
       <span class="hoje-toggle ${marcadoHoje?'active':''}" onclick="toggleParaHoje('${id}',${marcadoHoje})" title="Marcar pra hoje">🎯</span>
+      <span class="del" onclick="editarTarefa('${id}')" title="Editar">✏️</span>
       <span class="del" onclick="apagarTarefa('${id}')">🗑️</span></div>
       <div><span class="tag ${prio}" style="cursor:pointer;" onclick="ciclarPrioridade('${id}','${prio}')">${prioLabel}</span>${tagHtml}</div>${subHtml}</div>`;
   });
