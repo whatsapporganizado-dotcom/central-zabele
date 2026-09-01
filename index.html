@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Central Zabelê">
+<title>Central Zabelê</title>
+<style>
+  :root{
+    --paper:#AEB3BD; --ink:#20242B; --ink-soft:#666e7a; --field-bg:#F2F3F5;
+    --wine:#7C2D2D; --wine-soft:#F1E3E1;
+    --slate:#33415C; --slate-soft:#E1E6EE;
+    --sage:#4F7A55; --sage-soft:#E3EDE4;
+    --amber:#9C6B1F; --amber-soft:#F4E8D3;
+    --line:#E2E5EA; --card:#FFFFFF;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;}
+  .phone{max-width:420px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+  .screens{flex:1;position:relative;padding-bottom:76px;}
+  .screen{display:none;padding:20px 20px 10px;animation:fade .16s ease;}
+  .screen.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .eyebrow{font-size:13px;color:var(--ink-soft);margin:0 0 4px;}
+  h1{font-family:Georgia,serif;font-size:23px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em;}
+  .sub{font-size:13px;color:var(--ink-soft);margin:0 0 16px;}
+  .back{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-soft);margin-bottom:12px;cursor:pointer;width:fit-content;}
+
+  .pill-row{display:flex;gap:8px;overflow-x:auto;margin-bottom:18px;}
+  .pill{flex:0 0 auto;background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:8px 12px;font-size:12.5px;display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;}
+  .pill .dot{width:7px;height:7px;border-radius:50%;}
+
+  .block{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:11px;cursor:pointer;}
+  .block .row{display:flex;align-items:center;gap:12px;}
+  .block .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
+  .block .name{font-size:15px;font-weight:600;}
+  .block .desc{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .block .chev{margin-left:auto;color:var(--ink-soft);}
+
+  .addbtn{display:flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--card);border:1px dashed var(--line);border-radius:12px;
+    padding:12px;font-size:13.5px;font-weight:600;color:var(--ink-soft);margin-bottom:14px;cursor:pointer;}
+  .addbtn:active{background:var(--slate-soft);}
+
+  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;}
+  .item .top{display:flex;align-items:flex-start;gap:10px;}
+  .item .top input{margin-top:2px;}
+  .item .title{font-size:14.5px;font-weight:600;flex:1;}
+  .item .del{font-size:16px;color:var(--ink-soft);padding:2px 4px;cursor:pointer;flex:0 0 auto;}
+  .item.done .title{color:var(--ink-soft);text-decoration:line-through;}
+  .sub-items{margin:8px 0 0 26px;border-left:2px solid var(--line);padding-left:12px;}
+  .sub-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;}
+  .sub-item.done label{color:var(--ink-soft);text-decoration:line-through;}
+  .add-step{font-size:12px;color:var(--slate);font-weight:600;margin-top:6px;cursor:pointer;}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;margin-top:6px;}
+  .tag.evento{background:var(--amber-soft);color:var(--amber);}
+  .tag.trabalho{background:var(--slate-soft);color:var(--slate);}
+  .tag.alta{background:var(--wine-soft);color:var(--wine);}
+  .tag.media{background:var(--amber-soft);color:var(--amber);}
+  .tag.baixa{background:var(--slate-soft);color:var(--slate);}
+  .item.hoje-marcada{border-color:var(--wine);border-width:1.5px;}
+  .hoje-toggle{font-size:16px;padding:2px 4px;cursor:pointer;flex:0 0 auto;opacity:.3;}
+  .hoje-toggle.active{opacity:1;}
+
+  .contact{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:var(--wine-soft);color:var(--wine);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:0 0 auto;}
+  .contact .info{flex:1;min-width:0;}
+  .contact .cname{font-size:14.5px;font-weight:600;}
+  .stage{display:inline-block;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;margin-top:4px;}
+  .stage.novo{background:var(--amber-soft);color:var(--amber);}
+  .stage.exp{background:var(--slate-soft);color:var(--slate);}
+  .stage.mat{background:var(--sage-soft);color:var(--sage);}
+
+  .detail-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;}
+  .detail-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
+  .detail-head .avatar{width:50px;height:50px;font-size:18px;}
+  .wa-btn{display:inline-flex;align-items:center;gap:6px;background:var(--sage-soft);color:var(--sage);
+    font-size:13px;font-weight:600;padding:9px 14px;border-radius:10px;margin-top:6px;text-decoration:none;}
+  .timeline{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;}
+  .tl-item{display:flex;gap:10px;padding:8px 0;font-size:13px;}
+  .tl-date{color:var(--ink-soft);font-size:11.5px;min-width:44px;flex:0 0 auto;}
+  .tl-add{display:flex;gap:8px;margin-top:10px;}
+  .tl-add input{flex:1;}
+
+  .slot{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:9px;
+    display:flex;align-items:center;gap:12px;cursor:pointer;transition:opacity .15s;}
+  .slot .day{font-size:14px;font-weight:600;min-width:78px;}
+  .slot .time{font-size:13px;color:var(--ink-soft);flex:1;}
+  .slot .st{font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:6px;white-space:nowrap;}
+  .slot .st.livre{background:var(--sage-soft);color:var(--sage);}
+  .slot .st.ocupado{background:#EDEEF1;color:var(--ink-soft);}
+  .slot.taken{opacity:.55;}
+
+  .note{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:9px;}
+  .note .d{font-size:11.5px;color:var(--ink-soft);margin-bottom:4px;}
+  .note .t{font-size:14px;}
+
+  .empty{font-size:13px;color:var(--ink-soft);text-align:center;padding:24px 10px;}
+  .day-block{margin-bottom:18px;}
+  .day-title{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:8px;text-transform:capitalize;}
+  .see-free{font-size:12.5px;font-weight:600;color:var(--slate);margin-top:4px;cursor:pointer;}
+
+  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;
+    background:var(--card);border-top:1px solid var(--line);display:flex;padding:10px 8px calc(18px + env(safe-area-inset-bottom));}
+  .tab{flex:1;text-align:center;font-size:11.5px;color:var(--ink-soft);cursor:pointer;padding:4px;}
+  .tab .ti{font-size:19px;display:block;margin-bottom:2px;}
+  .tab.active{color:var(--wine);font-weight:600;}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(20,22,26,.4);display:none;align-items:flex-end;z-index:50;}
+  .overlay.active{display:flex;}
+  .sheet{background:var(--card);width:100%;max-width:420px;margin:0 auto;border-radius:18px 18px 0 0;
+    padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:80vh;overflow-y:auto;}
+  .sheet h3{font-family:Georgia,serif;font-size:18px;margin:0 0 14px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:600;}
+  .field input, .field select, .field textarea{
+    width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 11px;font-size:14px;font-family:inherit;background:var(--field-bg);}
+  .field textarea{resize:vertical;min-height:60px;}
+  .radiorow{display:flex;gap:8px;}
+  .radiorow label{flex:1;border:1px solid var(--line);border-radius:9px;padding:9px;text-align:center;font-size:12.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+  .radiorow input{display:none;}
+  .radiorow input:checked + span{color:var(--wine);}
+  .radiorow label:has(input:checked){border-color:var(--wine);background:var(--wine-soft);}
+  .sheet-actions{display:flex;gap:10px;margin-top:16px;}
+  .btn{flex:1;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn.primary{background:var(--wine);color:#fff;}
+  .btn.ghost{background:var(--field-bg);color:var(--ink-soft);}
+
+  .status-banner{font-size:11.5px;text-align:center;padding:6px;color:var(--ink-soft);}
+  .status-banner.err{color:var(--wine);}
+</style>
+</head>
+<body>
+<div class="phone">
+<div class="screens">
+
+  <!-- HOJE -->
+  <div class="screen active" id="s-hoje">
+    <p class="eyebrow" id="hoje-data"></p>
+    <h1>Hoje</h1>
+    <p class="sub">Visão geral das duas áreas, num lugar só</p>
+    <div class="pill-row">
+      <div class="pill" onclick="go('s-tarefas')"><span class="dot" style="background:var(--wine)"></span> <span id="pill-tarefas">0 tarefas</span></div>
+      <div class="pill" onclick="go('s-contatos')"><span class="dot" style="background:var(--amber)"></span> <span id="pill-contatos">0 contatos novos</span></div>
+      <div class="pill" onclick="go('s-vagas')"><span class="dot" style="background:var(--sage)"></span> <span id="pill-vagas">0 vagas livres</span></div>
+    </div>
+    <div id="secao-pra-hoje"></div>
+    <div class="block" onclick="go('s-zabele')">
+      <div class="row">
+        <div class="ic" style="background:var(--wine-soft)">🎭</div>
+        <div><div class="name">Zabelê Instituto Musical</div><div class="desc">Tarefas, contatos e vagas</div></div>
+        <div class="chev">›</div>
+      </div>
+    </div>
+    <div class="block" onclick="go('s-saas')">
+      <div class="row">
+        <div class="ic" style="background:var(--slate-soft)">💻</div>
+        <div><div class="name">Projetos SaaS</div><div class="desc">Acompanhamento simples</div></div>
+        <div class="chev">›</div>
+      </div>
+    </div>
+    <div class="pill-row" style="margin-top:2px;">
+      <div class="pill" id="google-status" onclick="connectGoogle()">🔗 Conectar Google Agenda</div>
+    </div>
+    <p class="status-banner" id="conn-status">conectando…</p>
+  </div>
+
+  <!-- ZABELE -->
+  <div class="screen" id="s-zabele">
+    <p class="eyebrow">🎭 Zabelê Instituto Musical</p>
+    <h1>Blocos</h1>
+    <p class="sub">Os 3 tipos de coisa que você administra</p>
+    <div class="block" onclick="go('s-tarefas')">
+      <div class="row"><div class="ic" style="background:var(--slate-soft)">✅</div>
+        <div><div class="name">Tarefas & Trabalhos</div><div class="desc">Soltas, com etapas, ou cronograma de evento</div></div>
+        <div class="chev">›</div></div>
+    </div>
+    <div class="block" onclick="go('s-contatos')">
+      <div class="row"><div class="ic" style="background:var(--wine-soft)">👤</div>
+        <div><div class="name">Contatos</div><div class="desc">Pessoas com histórico</div></div>
+        <div class="chev">›</div></div>
+    </div>
+    <div class="block" onclick="go('s-vagas')">
+      <div class="row"><div class="ic" style="background:var(--amber-soft)">🗓️</div>
+        <div><div class="name">Vagas compartilhadas</div><div class="desc">Horários oferecidos a várias pessoas</div></div>
+        <div class="chev">›</div></div>
+    </div>
+  </div>
+
+  <!-- TAREFAS -->
+  <div class="screen" id="s-tarefas">
+    <div class="back" onclick="go('s-zabele')">‹ Zabelê</div>
+    <h1>Tarefas & Trabalhos</h1>
+    <p class="sub">Solta, com etapas, ou cronograma de evento</p>
+    <div class="addbtn" onclick="openModal('m-tarefa')">＋ Nova tarefa</div>
+    <div id="lista-tarefas"><p class="empty">Nenhuma tarefa ainda</p></div>
+  </div>
+
+  <!-- CONTATOS -->
+  <div class="screen" id="s-contatos">
+    <div class="back" onclick="go('s-zabele')">‹ Zabelê</div>
+    <h1>Contatos</h1>
+    <p class="sub">Fase de cada pessoa, num só lugar</p>
+    <div class="addbtn" onclick="openModal('m-contato')">＋ Novo contato</div>
+    <div id="lista-contatos"><p class="empty">Nenhum contato ainda</p></div>
+  </div>
+
+  <!-- CONTATO DETALHE -->
+  <div class="screen" id="s-contato-detalhe">
+    <div class="back" onclick="go('s-contatos')">‹ Contatos</div>
+    <div class="detail-card" id="contato-detalhe-body"></div>
+  </div>
+
+  <!-- VAGAS -->
+  <div class="screen" id="s-vagas">
+    <div class="back" onclick="go('s-zabele')">‹ Zabelê</div>
+    <h1>Vagas compartilhadas</h1>
+    <p class="sub">Toque numa vaga livre pra marcar como ocupada</p>
+    <div class="addbtn" onclick="openModal('m-vaga')">＋ Nova vaga</div>
+    <div id="lista-vagas"><p class="empty">Nenhuma vaga ainda</p></div>
+  </div>
+
+  <!-- SAAS -->
+  <div class="screen" id="s-saas">
+    <div class="back" onclick="go('s-hoje')">‹ Hoje</div>
+    <p class="eyebrow">💻 Projetos SaaS</p>
+    <h1>Acompanhamento</h1>
+    <p class="sub">Bloco simples, sem pipeline</p>
+    <div class="addbtn" onclick="openModal('m-nota')">＋ Nova nota</div>
+    <div id="lista-notas"><p class="empty">Nenhuma nota ainda</p></div>
+  </div>
+
+  <!-- HORARIOS LIVRES -->
+  <div class="screen" id="s-livres">
+    <div class="back" onclick="go(livresDestino==='vaga'?'s-vagas':'s-tarefas')">‹ Voltar</div>
+    <h1>Horários livres</h1>
+    <p class="sub" id="livres-sub">Próximos 7 dias · toque num horário livre pra usar</p>
+    <div id="lista-livres"><p class="empty">Carregando…</p></div>
+  </div>
+
+</div>
+
+<div class="tabbar">
+  <div class="tab active" data-tab="s-hoje" onclick="go('s-hoje')"><span class="ti">🏠</span>Hoje</div>
+  <div class="tab" data-tab="s-zabele" onclick="go('s-zabele')"><span class="ti">🎭</span>Zabelê</div>
+  <div class="tab" data-tab="s-saas" onclick="go('s-saas')"><span class="ti">💻</span>SaaS</div>
+</div>
+</div>
+
+<!-- MODAL: nova tarefa -->
+<div class="overlay" id="m-tarefa">
+  <div class="sheet">
+    <h3>Nova tarefa</h3>
+    <div class="field"><label>Título</label><input id="tf-titulo" placeholder="Ex: Atualizar app da cantina"></div>
+    <div class="field"><label>Tipo</label>
+      <div class="radiorow">
+        <label><input type="radio" name="tf-tipo" value="solta" checked><span>Solta</span></label>
+        <label><input type="radio" name="tf-tipo" value="trabalho"><span>Com etapas</span></label>
+        <label><input type="radio" name="tf-tipo" value="evento"><span>Evento</span></label>
+      </div>
+    </div>
+    <div class="field"><label>Prioridade</label>
+      <div class="radiorow">
+        <label><input type="radio" name="tf-prioridade" value="alta"><span>🔴 Alta</span></label>
+        <label><input type="radio" name="tf-prioridade" value="media" checked><span>🟡 Média</span></label>
+        <label><input type="radio" name="tf-prioridade" value="baixa"><span>⚪ Baixa</span></label>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('m-tarefa')">Cancelar</button>
+      <button class="btn primary" onclick="salvarTarefa()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: novo contato -->
+<div class="overlay" id="m-contato">
+  <div class="sheet">
+    <h3>Novo contato</h3>
+    <div class="field"><label>Nome</label><input id="ct-nome" placeholder="Ex: Marina Souza"></div>
+    <div class="field"><label>Telefone (com DDD)</label><input id="ct-telefone" placeholder="Ex: 11999998888"></div>
+    <div class="field"><label>Origem</label>
+      <select id="ct-origem"><option>WhatsApp</option><option>Instagram</option><option>Indicação</option><option>Outro</option></select>
+    </div>
+    <div class="field"><label>Fase</label>
+      <select id="ct-fase"><option value="novo">Contato feito</option><option value="exp">Experimental marcada</option><option value="mat">Matriculou</option></select>
+    </div>
+    <div class="field"><label>Nota inicial</label><textarea id="ct-nota" placeholder="O que ela quer, o que foi combinado..."></textarea></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('m-contato')">Cancelar</button>
+      <button class="btn primary" onclick="salvarContato()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: nova vaga -->
+<div class="overlay" id="m-vaga">
+  <div class="sheet">
+    <h3>Nova vaga</h3>
+    <div class="field"><label>Data</label><input id="vg-data" type="date"></div>
+    <div class="field"><label>Horário</label><input id="vg-horario" placeholder="Ex: 15h — 15h40"></div>
+    <div class="field"><label>Ver disponibilidade de</label>
+      <select id="vg-agenda"><option value="camila" selected>Camila</option><option value="geral">Agenda geral</option></select>
+    </div>
+    <div class="see-free" onclick="abrirHorariosLivres('vaga', document.getElementById('vg-agenda').value)">📅 Ver horários livres</div>
+    <div class="see-free" onclick="window.open('https://calendar.google.com/calendar/u/0/r','_blank')">🔗 Abrir minha agenda completa no Google</div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('m-vaga')">Cancelar</button>
+      <button class="btn primary" onclick="salvarVaga()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: nova etapa de evento (com data/horário, integra Google Agenda) -->
+<div class="overlay" id="m-etapa-evento">
+  <div class="sheet">
+    <h3>Nova etapa do cronograma</h3>
+    <div class="field"><label>Descrição</label><input id="ev-titulo" placeholder="Ex: Ensaio geral cena 2"></div>
+    <div class="field"><label>Data</label><input id="ev-data" type="date"></div>
+    <div class="field"><label>Início</label><input id="ev-inicio" type="time"></div>
+    <div class="field"><label>Fim</label><input id="ev-fim" type="time"></div>
+    <div class="see-free" onclick="window.open('https://calendar.google.com/calendar/u/0/r','_blank')">🔗 Abrir minha agenda completa no Google</div>
+    <p class="sub" style="margin:0 0 4px;" id="ev-hint">Se o Google Agenda estiver conectado, isso vai checar conflito e criar o evento automaticamente.</p>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('m-etapa-evento')">Cancelar</button>
+      <button class="btn primary" onclick="salvarEtapaEvento()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: nova nota saas -->
+<div class="overlay" id="m-nota">
+  <div class="sheet">
+    <h3>Nova nota</h3>
+    <div class="field"><label>Anotação</label><textarea id="nt-texto" placeholder="Ex: App financeiro pronto, falta plano de venda"></textarea></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('m-nota')">Cancelar</button>
+      <button class="btn primary" onclick="salvarNota()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== FIREBASE ====================== -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// ⚠️ TROQUE pelos dados reais do projeto "zabele-ordem-do-dia"
+// Firebase Console → ⚙️ Configurações do projeto → Seus apps → SDK config
+const firebaseConfig = {
+  apiKey: "AIzaSyDYMy-ralXWqh4pwIY7ukhKdY4OIQxFAuY",
+  authDomain: "zabele-ordem-do-dia.firebaseapp.com",
+  databaseURL: "https://zabele-ordem-do-dia-default-rtdb.firebaseio.com",
+  projectId: "zabele-ordem-do-dia",
+  storageBucket: "zabele-ordem-do-dia.firebasestorage.app",
+  messagingSenderId: "858666484195",
+  appId: "1:858666484195:web:d886600232b3167bfce0d6"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+db.ref('.info/connected').on('value', s=>{
+  const el = document.getElementById('conn-status');
+  if(s.val()===true){ el.textContent='sincronizado'; el.classList.remove('err'); }
+  else { el.textContent='sem conexão com o banco — confira o firebaseConfig'; el.classList.add('err'); }
+});
+
+// ---------- helpers ----------
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const map = {'s-hoje':'s-hoje','s-zabele':'s-zabele','s-tarefas':'s-zabele','s-contatos':'s-zabele',
+    's-contato-detalhe':'s-zabele','s-vagas':'s-zabele','s-saas':'s-saas'};
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===map[id]));
+  window.scrollTo(0,0);
+}
+function openModal(id){ document.getElementById(id).classList.add('active'); }
+function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+function hojeStr(){
+  const d = new Date();
+  return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
+}
+function hojeCurta(){
+  const d = new Date();
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}).replace('.','');
+}
+document.getElementById('hoje-data').textContent = hojeStr().replace(/^\w/,c=>c.toUpperCase());
+
+// ---------- TAREFAS ----------
+function hojeISO(){ return new Date().toISOString().slice(0,10); }
+function salvarTarefa(){
+  const titulo = document.getElementById('tf-titulo').value.trim();
+  if(!titulo) return;
+  const tipo = document.querySelector('input[name="tf-tipo"]:checked').value;
+  const prioridade = document.querySelector('input[name="tf-prioridade"]:checked').value;
+  db.ref('tarefas').push({titulo, tipo, prioridade, feita:false, subitens:{}, criadoEm: Date.now()});
+  document.getElementById('tf-titulo').value='';
+  closeModal('m-tarefa');
+}
+function toggleTarefa(id, atual){ db.ref('tarefas/'+id+'/feita').set(!atual); }
+const ORDEM_PRIO = ['alta','media','baixa'];
+function ciclarPrioridade(id, atual){
+  const idx = ORDEM_PRIO.indexOf(atual);
+  const prox = ORDEM_PRIO[(idx+1)%ORDEM_PRIO.length];
+  db.ref('tarefas/'+id+'/prioridade').set(prox);
+}
+function toggleParaHoje(id, marcadoHoje){
+  if(marcadoHoje){ db.ref('tarefas/'+id+'/paraHojeData').remove(); }
+  else{ db.ref('tarefas/'+id+'/paraHojeData').set(hojeISO()); }
+}
+function apagarTarefa(id){
+  if(!confirm('Apagar essa tarefa (e as etapas dela, se tiver)? Não tem como desfazer.')) return;
+  db.ref('tarefas/'+id).remove();
+}
+function toggleSub(tid, sid, atual){ db.ref('tarefas/'+tid+'/subitens/'+sid+'/feita').set(!atual); }
+let etapaTarefaId = null;
+function addEtapa(tid, tipo){
+  if(tipo === 'evento'){
+    etapaTarefaId = tid;
+    ['ev-titulo','ev-data','ev-inicio','ev-fim'].forEach(i=>document.getElementById(i).value='');
+    openModal('m-etapa-evento');
+    return;
+  }
+  const texto = prompt('Descrição da etapa');
+  if(!texto) return;
+  db.ref('tarefas/'+tid+'/subitens').push({titulo:texto, feita:false});
+}
+
+// ---------- GOOGLE AGENDA ----------
+const GOOGLE_CLIENT_ID = '999819851730-4n8f2cbbsn7gka68l5atcopfehmq4n4r.apps.googleusercontent.com';
+const CALENDAR_ID = '9da65b0e0135cb2c531831c06849789d73ea2758667127d4f9b7bbae2e8489b5@group.calendar.google.com';
+const CALENDARS = {
+  camila: { nome:'Camila', id:'b7ffdeb7b111accf639d30b0f322759078ed0fb33de558cd37a770e75e0a0ea5@group.calendar.google.com' },
+  geral: { nome:'Agenda geral', id: CALENDAR_ID }
+};
+let accessToken = null;
+let tokenClient = null;
+
+function connectGoogle(){
+  if(typeof google === 'undefined' || !google.accounts){
+    alert('O Google ainda está carregando, tenta de novo em 1 segundo.');
+    return;
+  }
+  if(!tokenClient){
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/calendar.events',
+      callback: (resp)=>{
+        if(resp.error){ alert('Não foi possível conectar ao Google: '+resp.error); return; }
+        accessToken = resp.access_token;
+        const el = document.getElementById('google-status');
+        el.textContent = '✅ Google Agenda conectado';
+        el.onclick = null;
+        el.style.cursor = 'default';
+      }
+    });
+  }
+  tokenClient.requestAccessToken();
+}
+
+async function checarConflito(startISO, endISO){
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events`
+    + `?timeMin=${encodeURIComponent(startISO)}&timeMax=${encodeURIComponent(endISO)}&singleEvents=true`;
+  const res = await fetch(url, {headers:{Authorization:'Bearer '+accessToken}});
+  if(!res.ok) return [];
+  const json = await res.json();
+  if(!json.items) return [];
+  return json.items.map(e=>({
+    summary: e.summary || '(sem título)',
+    inicio: (e.start.dateTime||e.start.date||'').substring(11,16),
+    fim: (e.end.dateTime||e.end.date||'').substring(11,16)
+  }));
+}
+
+async function criarEventoGoogle(titulo, startISO, endISO){
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events`;
+  const body = {
+    summary: titulo,
+    start: {dateTime: startISO, timeZone:'America/Sao_Paulo'},
+    end: {dateTime: endISO, timeZone:'America/Sao_Paulo'}
+  };
+  const res = await fetch(url, {method:'POST',
+    headers:{Authorization:'Bearer '+accessToken, 'Content-Type':'application/json'},
+    body: JSON.stringify(body)});
+  const json = await res.json();
+  return json.id || null;
+}
+
+// ---------- HORÁRIOS LIVRES DA SEMANA ----------
+let livresDestino = null;
+let livresCalendarId = null;
+let livresCalendarNome = '';
+function abrirHorariosLivres(destino, agendaKey){
+  if(!accessToken){ alert('Conecta o Google Agenda primeiro, no botão da tela Hoje.'); return; }
+  livresDestino = destino;
+  const agenda = CALENDARS[agendaKey] || CALENDARS.geral;
+  livresCalendarId = agenda.id;
+  livresCalendarNome = agenda.nome;
+  closeModal(destino==='vaga' ? 'm-vaga' : 'm-etapa-evento');
+  carregarSemanaLivre();
+}
+
+function calcularGaps(eventos, inicioDia, fimDia){
+  const toMin = t=>{const [h,m]=t.split(':').map(Number); return h*60+m;};
+  const toStr = m=>{const h=String(Math.floor(m/60)).padStart(2,'0'); const mm=String(m%60).padStart(2,'0'); return h+':'+mm;};
+  let cursor = toMin(inicioDia);
+  const fim = toMin(fimDia);
+  const gaps=[];
+  eventos.forEach(e=>{
+    const s = toMin(e.inicio), f = toMin(e.fim);
+    if(s > cursor + 15) gaps.push({inicio:toStr(cursor), fim:toStr(s)});
+    cursor = Math.max(cursor, f);
+  });
+  if(cursor < fim - 15) gaps.push({inicio:toStr(cursor), fim:toStr(fim)});
+  return gaps;
+}
+
+async function carregarSemanaLivre(){
+  go('s-livres');
+  document.getElementById('livres-sub').textContent = `Próximos 7 dias · agenda: ${livresCalendarNome} · toque num horário livre pra usar`;
+  const wrap = document.getElementById('lista-livres');
+  wrap.innerHTML = '<p class="empty">Carregando…</p>';
+
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const fimSemana = new Date(hoje); fimSemana.setDate(fimSemana.getDate()+7);
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(livresCalendarId)}/events`
+    + `?timeMin=${encodeURIComponent(hoje.toISOString())}&timeMax=${encodeURIComponent(fimSemana.toISOString())}`
+    + `&singleEvents=true&orderBy=startTime`;
+  let eventos = [];
+  try{
+    const res = await fetch(url, {headers:{Authorization:'Bearer '+accessToken}});
+    const json = await res.json();
+    eventos = (json.items||[]).filter(e=>e.start && e.start.dateTime);
+  }catch(err){
+    wrap.innerHTML = '<p class="empty">Não consegui carregar a agenda agora. Tenta de novo.</p>';
+    return;
+  }
+
+  let html='';
+  for(let i=0;i<7;i++){
+    const dia = new Date(hoje); dia.setDate(dia.getDate()+i);
+    const diaStr = dia.toISOString().slice(0,10);
+    const doDia = eventos.filter(e=>e.start.dateTime.slice(0,10)===diaStr)
+      .map(e=>({inicio:e.start.dateTime.slice(11,16), fim:e.end.dateTime.slice(11,16), titulo:e.summary||'(sem título)'}))
+      .sort((a,b)=>a.inicio.localeCompare(b.inicio));
+    const gaps = calcularGaps(doDia, '08:00', '20:00');
+    const label = dia.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+    html += `<div class="day-block"><div class="day-title">${label}</div>`;
+    if(gaps.length===0) html += `<p class="empty" style="padding:6px 0;">Sem horário livre nesse dia</p>`;
+    gaps.forEach(g=>{
+      html += `<div class="slot" onclick="escolherLivre('${diaStr}','${g.inicio}','${g.fim}')">
+        <div class="time" style="flex:1;font-weight:600;color:var(--ink);">${g.inicio} — ${g.fim}</div><span class="st livre">Livre</span></div>`;
+    });
+    doDia.forEach(e=>{
+      html += `<div class="slot taken"><div class="time" style="flex:1">${e.inicio}–${e.fim} · ${e.titulo}</div><span class="st ocupado">Ocupado</span></div>`;
+    });
+    html += `</div>`;
+  }
+  wrap.innerHTML = html;
+}
+
+function escolherLivre(dia, inicio, fim){
+  const toMin = t=>{const [h,m]=t.split(':').map(Number); return h*60+m;};
+  const toStr = m=>{const h=String(Math.floor(m/60)).padStart(2,'0'); const mm=String(m%60).padStart(2,'0'); return h+':'+mm;};
+  const fimEscolha = toStr(Math.min(toMin(fim), toMin(inicio)+40));
+  if(livresDestino === 'vaga'){
+    go('s-vagas');
+    document.getElementById('vg-data').value = dia;
+    document.getElementById('vg-horario').value = inicio+'h — '+fimEscolha+'h';
+    openModal('m-vaga');
+  } else {
+    go('s-tarefas');
+    document.getElementById('ev-data').value = dia;
+    document.getElementById('ev-inicio').value = inicio;
+    document.getElementById('ev-fim').value = fimEscolha;
+    openModal('m-etapa-evento');
+  }
+}
+
+async function salvarEtapaEvento(){
+  const titulo = document.getElementById('ev-titulo').value.trim();
+  const data = document.getElementById('ev-data').value;
+  const inicio = document.getElementById('ev-inicio').value;
+  const fim = document.getElementById('ev-fim').value;
+  if(!titulo || !data || !inicio || !fim){ alert('Preenche todos os campos.'); return; }
+  const startISO = `${data}T${inicio}:00-03:00`;
+  const endISO = `${data}T${fim}:00-03:00`;
+
+  let googleEventId = null;
+  if(accessToken){
+    const conflitos = await checarConflito(startISO, endISO);
+    if(conflitos.length){
+      const lista = conflitos.map(e=>`• ${e.summary} (${e.inicio}–${e.fim})`).join('\n');
+      if(!confirm(`Já existe compromisso nesse horário na agenda:\n\n${lista}\n\nCriar mesmo assim?`)) return;
+    }
+    googleEventId = await criarEventoGoogle(titulo, startISO, endISO);
+  } else {
+    if(!confirm('O Google Agenda ainda não está conectado — a etapa vai ser salva só no app, sem checar conflito nem criar evento na agenda. Continuar?')) return;
+  }
+
+  const dataFmt = data.split('-').reverse().slice(0,2).join('/');
+  const label = `${dataFmt} ${inicio} — ${titulo}`;
+  const novo = {titulo:label, feita:false, data, inicio, fim};
+  if(googleEventId) novo.googleEventId = googleEventId;
+  db.ref('tarefas/'+etapaTarefaId+'/subitens').push(novo);
+  closeModal('m-etapa-evento');
+}
+db.ref('tarefas').on('value', snap=>{
+  const wrap = document.getElementById('lista-tarefas');
+  const data = snap.val();
+  if(!data){ wrap.innerHTML = '<p class="empty">Nenhuma tarefa ainda</p>'; atualizarPills(); return; }
+  let html='';
+  Object.entries(data).sort((a,b)=>(b[1].criadoEm||0)-(a[1].criadoEm||0)).forEach(([id,t])=>{
+    const tagHtml = t.tipo==='trabalho' ? '<span class="tag trabalho">Trabalho com etapas</span>'
+                   : t.tipo==='evento' ? '<span class="tag evento">Cronograma de evento</span>' : '';
+    let subHtml='';
+    if(t.tipo!=='solta'){
+      subHtml = '<div class="sub-items">';
+      if(t.subitens) Object.entries(t.subitens).forEach(([sid,s])=>{
+        subHtml += `<div class="sub-item ${s.feita?'done':''}">
+          <input type="checkbox" ${s.feita?'checked':''} onclick="toggleSub('${id}','${sid}',${s.feita})">
+          <label>${s.titulo}</label></div>`;
+      });
+      subHtml += `<div class="add-step" onclick="addEtapa('${id}','${t.tipo}')">＋ adicionar etapa</div></div>`;
+    }
+    const prio = t.prioridade || 'media';
+    const prioLabel = {alta:'🔴 Alta', media:'🟡 Média', baixa:'⚪ Baixa'}[prio];
+    const marcadoHoje = t.paraHojeData === hojeISO();
+    html += `<div class="item ${t.feita?'done':''} ${marcadoHoje?'hoje-marcada':''}">
+      <div class="top"><input type="checkbox" ${t.feita?'checked':''} onclick="toggleTarefa('${id}',${t.feita})">
+      <div class="title">${t.titulo}</div>
+      <span class="hoje-toggle ${marcadoHoje?'active':''}" onclick="toggleParaHoje('${id}',${marcadoHoje})" title="Marcar pra hoje">🎯</span>
+      <span class="del" onclick="apagarTarefa('${id}')">🗑️</span></div>
+      <div><span class="tag ${prio}" style="cursor:pointer;" onclick="ciclarPrioridade('${id}','${prio}')">${prioLabel}</span>${tagHtml}</div>${subHtml}</div>`;
+  });
+  wrap.innerHTML = html;
+  atualizarPills();
+  renderizarParaHoje(data);
+});
+
+function renderizarParaHoje(data){
+  const sec = document.getElementById('secao-pra-hoje');
+  if(!sec) return;
+  const hoje = hojeISO();
+  const itens = data ? Object.entries(data).filter(([id,t])=>t.paraHojeData===hoje && !t.feita) : [];
+  if(itens.length===0){ sec.innerHTML=''; return; }
+  const prioLabelMap = {alta:'🔴 Alta', media:'🟡 Média', baixa:'⚪ Baixa'};
+  let html2 = `<p class="eyebrow" style="margin-top:2px;">🎯 Pra hoje</p>`;
+  itens.sort((a,b)=>(a[1].criadoEm||0)-(b[1].criadoEm||0)).forEach(([id,t])=>{
+    const prio = t.prioridade || 'media';
+    html2 += `<div class="item">
+      <div class="top"><input type="checkbox" onclick="toggleTarefa('${id}',false)">
+      <div class="title">${t.titulo}</div>
+      <span class="hoje-toggle active" onclick="toggleParaHoje('${id}',true)" title="Tirar de hoje">🎯</span></div>
+      <div><span class="tag ${prio}">${prioLabelMap[prio]}</span></div></div>`;
+  });
+  sec.innerHTML = html2;
+}
+
+// ---------- CONTATOS ----------
+const stageLabel = {novo:'Contato feito', exp:'Experimental marcada', mat:'Matriculou'};
+function salvarContato(){
+  const nome = document.getElementById('ct-nome').value.trim();
+  if(!nome) return;
+  const telefone = document.getElementById('ct-telefone').value.trim();
+  const origem = document.getElementById('ct-origem').value;
+  const fase = document.getElementById('ct-fase').value;
+  const nota = document.getElementById('ct-nota').value.trim();
+  const timeline = {};
+  const tid = db.ref('x').push().key;
+  timeline[tid] = {data: hojeCurta(), texto: (nota||('Contato via '+origem))};
+  db.ref('contatos').push({nome, telefone, origem, fase, timeline, criadoEm: Date.now()});
+  ['ct-nome','ct-telefone','ct-nota'].forEach(i=>document.getElementById(i).value='');
+  closeModal('m-contato');
+}
+let contatoAtualId = null;
+function abrirContato(id, c){
+  contatoAtualId = id;
+  const inicial = c.nome.trim()[0].toUpperCase();
+  const waLink = c.telefone ? `https://wa.me/55${c.telefone.replace(/\D/g,'')}` : '#';
+  let tl='';
+  if(c.timeline) Object.values(c.timeline).sort((a,b)=>(a.data>b.data?1:-1)).forEach(t=>{
+    tl += `<div class="tl-item"><span class="tl-date">${t.data}</span><span>${t.texto}</span></div>`;
+  });
+  document.getElementById('contato-detalhe-body').innerHTML = `
+    <div class="detail-head"><div class="avatar">${inicial}</div>
+      <div><div class="cname" style="font-size:16px;font-weight:600;">${c.nome}</div>
+      <span class="stage ${c.fase}">${stageLabel[c.fase]}</span></div></div>
+    <a class="wa-btn" href="${waLink}" target="_blank">💬 Abrir conversa no WhatsApp</a>
+    <div class="timeline">${tl || '<p class="empty">Sem anotações ainda</p>'}
+      <div class="tl-add"><input id="tl-novo" placeholder="Nova anotação..."><button class="btn primary" style="flex:0 0 auto;padding:9px 14px;" onclick="addTimeline()">＋</button></div>
+    </div>`;
+  go('s-contato-detalhe');
+}
+function addTimeline(){
+  const val = document.getElementById('tl-novo').value.trim();
+  if(!val || !contatoAtualId) return;
+  db.ref('contatos/'+contatoAtualId+'/timeline').push({data:hojeCurta(), texto:val});
+  document.getElementById('tl-novo').value='';
+}
+db.ref('contatos').on('value', snap=>{
+  const wrap = document.getElementById('lista-contatos');
+  const data = snap.val();
+  if(!data){ wrap.innerHTML = '<p class="empty">Nenhum contato ainda</p>'; atualizarPills(); return; }
+  let html='';
+  Object.entries(data).sort((a,b)=>(b[1].criadoEm||0)-(a[1].criadoEm||0)).forEach(([id,c])=>{
+    html += `<div class="contact" onclick='abrirContato("${id}", ${JSON.stringify(c).replace(/'/g,"&#39;")})'>
+      <div class="avatar">${c.nome.trim()[0].toUpperCase()}</div>
+      <div class="info"><div class="cname">${c.nome}</div><span class="stage ${c.fase}">${stageLabel[c.fase]}</span></div></div>`;
+  });
+  wrap.innerHTML = html;
+  atualizarPills();
+});
+
+// ---------- VAGAS ----------
+function salvarVaga(){
+  const data = document.getElementById('vg-data').value;
+  const horario = document.getElementById('vg-horario').value.trim();
+  if(!data || !horario) return;
+  db.ref('vagas').push({data, horario, status:'livre', criadoEm: Date.now()});
+  document.getElementById('vg-horario').value='';
+  closeModal('m-vaga');
+}
+function ocuparVaga(id, status){
+  if(status!=='livre') return;
+  const quem = prompt('Nome de quem escolheu esse horário:');
+  if(!quem) return;
+  db.ref('vagas/'+id).update({status:'ocupado', ocupadoPor:quem});
+}
+db.ref('vagas').on('value', snap=>{
+  const wrap = document.getElementById('lista-vagas');
+  const data = snap.val();
+  if(!data){ wrap.innerHTML = '<p class="empty">Nenhuma vaga ainda</p>'; atualizarPills(); return; }
+  let html='';
+  Object.entries(data).sort((a,b)=>(a[1].data>b[1].data?1:-1)).forEach(([id,v])=>{
+    const dataFmt = new Date(v.data+'T00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+    html += `<div class="slot ${v.status!=='livre'?'taken':''}" onclick="ocuparVaga('${id}','${v.status}')">
+      <div class="day">${dataFmt}</div><div class="time">${v.horario}</div>
+      <span class="st ${v.status}">${v.status==='livre'?'Livre':'Ocupado — '+(v.ocupadoPor||'')}</span></div>`;
+  });
+  wrap.innerHTML = html;
+  atualizarPills();
+});
+
+// ---------- SAAS ----------
+function salvarNota(){
+  const texto = document.getElementById('nt-texto').value.trim();
+  if(!texto) return;
+  db.ref('saasNotas').push({texto, data:hojeCurta(), criadoEm: Date.now()});
+  document.getElementById('nt-texto').value='';
+  closeModal('m-nota');
+}
+db.ref('saasNotas').on('value', snap=>{
+  const wrap = document.getElementById('lista-notas');
+  const data = snap.val();
+  if(!data){ wrap.innerHTML = '<p class="empty">Nenhuma nota ainda</p>'; return; }
+  let html='';
+  Object.entries(data).sort((a,b)=>(b[1].criadoEm||0)-(a[1].criadoEm||0)).forEach(([id,n])=>{
+    html += `<div class="note"><div class="d">${n.data}</div><div class="t">${n.texto}</div></div>`;
+  });
+  wrap.innerHTML = html;
+});
+
+// ---------- pills "Hoje" ----------
+function atualizarPills(){
+  db.ref('tarefas').once('value', s=>{
+    let n=0; s.forEach(c=>{ if(!c.val().feita) n++; });
+    document.getElementById('pill-tarefas').textContent = n+' tarefa'+(n===1?'':'s')+' pendente'+(n===1?'':'s');
+  });
+  db.ref('contatos').once('value', s=>{
+    let n=0; s.forEach(c=>{ if(c.val().fase==='novo') n++; });
+    document.getElementById('pill-contatos').textContent = n+' contato'+(n===1?'':'s')+' novo'+(n===1?'':'s');
+  });
+  db.ref('vagas').once('value', s=>{
+    let n=0; s.forEach(c=>{ if(c.val().status==='livre') n++; });
+    document.getElementById('pill-vagas').textContent = n+' vaga'+(n===1?'':'s')+' livre'+(n===1?'':'s');
+  });
+}
+</script>
+</body>
+</html>
