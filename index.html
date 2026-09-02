@@ -415,6 +415,22 @@
   </div>
 </div>
 
+<!-- MODAL: agendar aula de um contato no Google Agenda -->
+<div class="overlay" id="m-agendar-contato">
+  <div class="sheet">
+    <h3>Agendar no Google Agenda</h3>
+    <div class="field"><label>Título do evento</label><input id="ag-titulo"></div>
+    <div class="field"><label>Data</label><input id="ag-data" type="date"></div>
+    <div class="field"><label>Início</label><input id="ag-inicio" type="time"></div>
+    <div class="field"><label>Fim</label><input id="ag-fim" type="time"></div>
+    <p class="sub" style="margin:0 0 4px;">Cria o evento direto na sua agenda geral. Confira disponibilidade abrindo a agenda completa antes, se precisar.</p>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('m-agendar-contato')">Cancelar</button>
+      <button class="btn primary" onclick="salvarAgendamentoContato()">Criar evento</button>
+    </div>
+  </div>
+</div>
+
 <!-- ====================== FIREBASE ====================== -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
@@ -941,9 +957,9 @@ function salvarContato(){
   ['ct-nome','ct-telefone','ct-nota'].forEach(i=>document.getElementById(i).value='');
   closeModal('m-contato');
 }
-let contatoAtualId = null;
+let contatoAtualId = null, contatoAtualNome = '';
 function abrirContato(id, c){
-  contatoAtualId = id;
+  contatoAtualId = id; contatoAtualNome = c.nome;
   const inicial = c.nome.trim()[0].toUpperCase();
   const waLink = c.telefone ? `https://wa.me/55${c.telefone.replace(/\D/g,'')}` : '#';
   let tl='';
@@ -955,10 +971,33 @@ function abrirContato(id, c){
       <div><div class="cname" style="font-size:16px;font-weight:600;">${c.nome}</div>
       <span class="stage ${c.fase}">${stageLabel[c.fase]}</span></div></div>
     <a class="wa-btn" href="${waLink}" target="_blank">💬 Abrir conversa no WhatsApp</a>
+    <div class="see-free" onclick="abrirAgendarContato()">📅 Agendar aula no Google Agenda</div>
+    <div class="see-free" onclick="window.open('https://calendar.google.com/calendar/u/0/r','_blank')">🔗 Abrir minha agenda completa no Google</div>
     <div class="timeline">${tl || '<p class="empty">Sem anotações ainda</p>'}
       <div class="tl-add"><input id="tl-novo" placeholder="Nova anotação..."><button class="btn primary" style="flex:0 0 auto;padding:9px 14px;" onclick="addTimeline()">＋</button></div>
     </div>`;
   go('s-contato-detalhe');
+}
+function abrirAgendarContato(){
+  if(!accessToken){ alert('Conecta o Google Agenda primeiro, no botão da tela Hoje.'); return; }
+  document.getElementById('ag-titulo').value = `Aula experimental - ${contatoAtualNome}`;
+  document.getElementById('ag-data').value = '';
+  document.getElementById('ag-inicio').value = '';
+  document.getElementById('ag-fim').value = '';
+  openModal('m-agendar-contato');
+}
+async function salvarAgendamentoContato(){
+  const titulo = document.getElementById('ag-titulo').value.trim();
+  const data = document.getElementById('ag-data').value;
+  const inicio = document.getElementById('ag-inicio').value;
+  const fim = document.getElementById('ag-fim').value;
+  if(!titulo || !data || !inicio || !fim){ alert('Preenche todos os campos.'); return; }
+  const startISO = `${data}T${inicio}:00-03:00`;
+  const endISO = `${data}T${fim}:00-03:00`;
+  await criarEventoGoogle(titulo, startISO, endISO);
+  const dataFmt = data.split('-').reverse().slice(0,2).join('/');
+  db.ref('contatos/'+contatoAtualId+'/timeline').push({data:hojeCurta(), texto:`Aula agendada — ${dataFmt} ${inicio}`});
+  closeModal('m-agendar-contato');
 }
 function addTimeline(){
   const val = document.getElementById('tl-novo').value.trim();
