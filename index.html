@@ -51,6 +51,7 @@
   .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;touch-action:pan-y;}
   .item.dragging{opacity:.85;box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:20;position:relative;}
   .drag-handle{font-size:18px;color:var(--ink-soft);padding:0 6px 0 0;cursor:grab;touch-action:none;flex:0 0 auto;}
+  .item.dragging .drag-handle{cursor:grabbing;}
   .item .top{display:flex;align-items:flex-start;gap:10px;}
   .item .top input{margin-top:2px;}
   .item .title{font-size:14.5px;font-weight:600;flex:1;}
@@ -495,48 +496,47 @@ function addEtapa(tid, area, tipo){
 function habilitarArrastar(containerId, area){
   const container = document.getElementById(containerId);
   if(!container) return;
-  let dragEl=null, startY=0, offsetAtual=0;
+  let dragEl=null, startY=0;
 
   container.querySelectorAll('.drag-handle').forEach(handle=>{
-    handle.ontouchstart = (e)=>{
+    handle.onpointerdown = (e)=>{
       dragEl = handle.closest('.item');
-      startY = e.touches[0].clientY;
-      offsetAtual = 0;
+      startY = e.clientY;
       dragEl.classList.add('dragging');
+      handle.setPointerCapture(e.pointerId);
+    };
+    handle.onpointermove = (e)=>{
+      if(!dragEl) return;
+      e.preventDefault();
+      const y = e.clientY;
+      dragEl.style.transform = `translateY(${y-startY}px)`;
+      const siblings = Array.from(container.children).filter(el=>el!==dragEl && el.classList.contains('item'));
+      for(const sib of siblings){
+        const rect = sib.getBoundingClientRect();
+        const meio = rect.top + rect.height/2;
+        const dragIndex = Array.from(container.children).indexOf(dragEl);
+        const sibIndex = Array.from(container.children).indexOf(sib);
+        if(y < meio && sibIndex < dragIndex){
+          container.insertBefore(dragEl, sib);
+          startY = y; dragEl.style.transform='';
+          break;
+        } else if(y > meio && sibIndex > dragIndex){
+          container.insertBefore(dragEl, sib.nextSibling);
+          startY = y; dragEl.style.transform='';
+          break;
+        }
+      }
+    };
+    handle.onpointerup = ()=>{
+      if(!dragEl) return;
+      dragEl.style.transform='';
+      dragEl.classList.remove('dragging');
+      const ids = Array.from(container.children).filter(el=>el.classList.contains('item')).map(el=>el.dataset.id);
+      const n = ids.length;
+      ids.forEach((id,i)=>{ db.ref(tarefaPath(area)+'/'+id+'/ordem').set((n-i)*1000); });
+      dragEl = null;
     };
   });
-  container.ontouchmove = (e)=>{
-    if(!dragEl) return;
-    e.preventDefault();
-    const y = e.touches[0].clientY;
-    offsetAtual = y - startY;
-    dragEl.style.transform = `translateY(${offsetAtual}px)`;
-    const siblings = Array.from(container.children).filter(el=>el!==dragEl && el.classList.contains('item'));
-    for(const sib of siblings){
-      const rect = sib.getBoundingClientRect();
-      const meio = rect.top + rect.height/2;
-      const dragIndex = Array.from(container.children).indexOf(dragEl);
-      const sibIndex = Array.from(container.children).indexOf(sib);
-      if(y < meio && sibIndex < dragIndex){
-        container.insertBefore(dragEl, sib);
-        startY = y; offsetAtual = 0; dragEl.style.transform='';
-        break;
-      } else if(y > meio && sibIndex > dragIndex){
-        container.insertBefore(dragEl, sib.nextSibling);
-        startY = y; offsetAtual = 0; dragEl.style.transform='';
-        break;
-      }
-    }
-  };
-  container.ontouchend = ()=>{
-    if(!dragEl) return;
-    dragEl.style.transform='';
-    dragEl.classList.remove('dragging');
-    const ids = Array.from(container.children).filter(el=>el.classList.contains('item')).map(el=>el.dataset.id);
-    const n = ids.length;
-    ids.forEach((id,i)=>{ db.ref(tarefaPath(area)+'/'+id+'/ordem').set((n-i)*1000); });
-    dragEl = null;
-  };
 }
 
 
@@ -802,37 +802,38 @@ function habilitarArrastarMisto(containerId){
   if(!container) return;
   let dragEl=null, startY=0;
   container.querySelectorAll('.drag-handle').forEach(handle=>{
-    handle.ontouchstart = (e)=>{
+    handle.onpointerdown = (e)=>{
       dragEl = handle.closest('.item');
-      startY = e.touches[0].clientY;
+      startY = e.clientY;
       dragEl.classList.add('dragging');
+      handle.setPointerCapture(e.pointerId);
+    };
+    handle.onpointermove = (e)=>{
+      if(!dragEl) return;
+      e.preventDefault();
+      const y = e.clientY;
+      dragEl.style.transform = `translateY(${y-startY}px)`;
+      const siblings = Array.from(container.children).filter(el=>el!==dragEl && el.classList.contains('item'));
+      for(const sib of siblings){
+        const rect = sib.getBoundingClientRect();
+        const meio = rect.top + rect.height/2;
+        const dragIndex = Array.from(container.children).indexOf(dragEl);
+        const sibIndex = Array.from(container.children).indexOf(sib);
+        if(y < meio && sibIndex < dragIndex){ container.insertBefore(dragEl, sib); startY=y; dragEl.style.transform=''; break; }
+        else if(y > meio && sibIndex > dragIndex){ container.insertBefore(dragEl, sib.nextSibling); startY=y; dragEl.style.transform=''; break; }
+      }
+    };
+    handle.onpointerup = ()=>{
+      if(!dragEl) return;
+      dragEl.style.transform=''; dragEl.classList.remove('dragging');
+      const items = Array.from(container.children).filter(el=>el.classList.contains('item'));
+      const n = items.length;
+      items.forEach((el,i)=>{
+        db.ref(tarefaPath(el.dataset.area)+'/'+el.dataset.id+'/ordemHoje').set((n-i)*1000);
+      });
+      dragEl = null;
     };
   });
-  container.ontouchmove = (e)=>{
-    if(!dragEl) return;
-    e.preventDefault();
-    const y = e.touches[0].clientY;
-    dragEl.style.transform = `translateY(${y-startY}px)`;
-    const siblings = Array.from(container.children).filter(el=>el!==dragEl && el.classList.contains('item'));
-    for(const sib of siblings){
-      const rect = sib.getBoundingClientRect();
-      const meio = rect.top + rect.height/2;
-      const dragIndex = Array.from(container.children).indexOf(dragEl);
-      const sibIndex = Array.from(container.children).indexOf(sib);
-      if(y < meio && sibIndex < dragIndex){ container.insertBefore(dragEl, sib); startY=y; dragEl.style.transform=''; break; }
-      else if(y > meio && sibIndex > dragIndex){ container.insertBefore(dragEl, sib.nextSibling); startY=y; dragEl.style.transform=''; break; }
-    }
-  };
-  container.ontouchend = ()=>{
-    if(!dragEl) return;
-    dragEl.style.transform=''; dragEl.classList.remove('dragging');
-    const items = Array.from(container.children).filter(el=>el.classList.contains('item'));
-    const n = items.length;
-    items.forEach((el,i)=>{
-      db.ref(tarefaPath(el.dataset.area)+'/'+el.dataset.id+'/ordemHoje').set((n-i)*1000);
-    });
-    dragEl = null;
-  };
 }
 
 // ---------- CONTATOS ----------
