@@ -455,6 +455,14 @@ function toggleParaHoje(id, area, marcadoHoje){
 }
 function apagarTarefa(id, area){
   if(!confirm('Apagar essa tarefa (e as etapas dela, se tiver)? Não tem como desfazer.')) return;
+  const t = tarefasCache[area] && tarefasCache[area][id];
+  if(t && t.feita){
+    db.ref('historicoArquivado').push({
+      tipo:'tarefa', titulo:t.titulo, area,
+      concluidoEm: t.concluidoEm || t.criadoEm || Date.now(),
+      arquivadoEm: Date.now()
+    });
+  }
   db.ref(tarefaPath(area)+'/'+id).remove();
 }
 function editarTarefa(id, area){
@@ -995,16 +1003,26 @@ function atualizarPills(){
 }
 
 // ---------- HISTÓRICO ----------
-function renderizarHistorico(){
+async function renderizarHistorico(){
   const wrap = document.getElementById('lista-historico');
+  wrap.innerHTML = '<p class="empty">Carregando…</p>';
+  let arquivado = {};
+  try{
+    const snap = await db.ref('historicoArquivado').once('value');
+    arquivado = snap.val() || {};
+  }catch(err){}
+
   let html = '';
 
-  // Tarefas concluídas (zabele + saas)
+  // Tarefas concluídas (ainda na lista + já arquivadas por terem sido apagadas)
   let tarefasFeitas = [];
   ['zabele','saas'].forEach(area=>{
     Object.entries(tarefasCache[area]||{}).forEach(([id,t])=>{
       if(t.feita) tarefasFeitas.push({titulo:t.titulo, area, quando:t.concluidoEm||t.criadoEm||0});
     });
+  });
+  Object.values(arquivado).forEach(a=>{
+    if(a.tipo==='tarefa') tarefasFeitas.push({titulo:a.titulo, area:a.area, quando:a.concluidoEm||a.arquivadoEm||0});
   });
   if(tarefasFeitas.length){
     tarefasFeitas.sort((a,b)=>b.quando-a.quando);
