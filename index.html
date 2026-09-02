@@ -354,6 +354,42 @@
   </div>
 </div>
 
+<!-- MODAL: nova etapa (trabalho com etapas) -->
+<div class="overlay" id="m-etapa-trabalho">
+  <div class="sheet">
+    <h3>Nova etapa</h3>
+    <div class="field"><label>Descrição</label><input id="et-texto" placeholder="Ex: Arrumar material"></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('m-etapa-trabalho')">Cancelar</button>
+      <button class="btn primary" onclick="salvarEtapaTrabalho()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: editar tarefa -->
+<div class="overlay" id="m-editar-tarefa">
+  <div class="sheet">
+    <h3>Editar tarefa</h3>
+    <div class="field"><label>Título</label><input id="et2-texto"></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('m-editar-tarefa')">Cancelar</button>
+      <button class="btn primary" onclick="salvarEdicaoTarefa()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: quem ocupou a vaga -->
+<div class="overlay" id="m-ocupar-vaga">
+  <div class="sheet">
+    <h3>Quem ocupou esse horário?</h3>
+    <div class="field"><label>Nome</label><input id="vo-nome" placeholder="Nome da aluna"></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" onclick="closeModal('m-ocupar-vaga')">Cancelar</button>
+      <button class="btn primary" onclick="confirmarOcuparVaga()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: nova nota saas -->
 <div class="overlay" id="m-nota">
   <div class="sheet">
@@ -465,13 +501,18 @@ function apagarTarefa(id, area){
   }
   db.ref(tarefaPath(area)+'/'+id).remove();
 }
+let editarTarefaId=null, editarTarefaAreaAtual=null;
 function editarTarefa(id, area){
+  editarTarefaId = id; editarTarefaAreaAtual = area;
   const atual = (tarefasCache[area][id] && tarefasCache[area][id].titulo) || '';
-  const novo = prompt('Editar título da tarefa:', atual);
-  if(novo === null) return;
-  const limpo = novo.trim();
-  if(!limpo) return;
-  db.ref(tarefaPath(area)+'/'+id+'/titulo').set(limpo);
+  document.getElementById('et2-texto').value = atual;
+  openModal('m-editar-tarefa');
+}
+function salvarEdicaoTarefa(){
+  const novo = document.getElementById('et2-texto').value.trim();
+  if(!novo) return;
+  db.ref(tarefaPath(editarTarefaAreaAtual)+'/'+editarTarefaId+'/titulo').set(novo);
+  closeModal('m-editar-tarefa');
 }
 function escapeHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -492,15 +533,20 @@ function salvarNotaEtapa(){
 function toggleSub(tid, area, sid, atual){ db.ref(tarefaPath(area)+'/'+tid+'/subitens/'+sid+'/feita').set(!atual); }
 let etapaTarefaId = null, etapaArea = 'zabele';
 function addEtapa(tid, area, tipo){
+  etapaTarefaId = tid; etapaArea = area;
   if(tipo === 'evento'){
-    etapaTarefaId = tid; etapaArea = area;
     ['ev-titulo','ev-data','ev-inicio','ev-fim'].forEach(i=>document.getElementById(i).value='');
     openModal('m-etapa-evento');
     return;
   }
-  const texto = prompt('Descrição da etapa');
+  document.getElementById('et-texto').value='';
+  openModal('m-etapa-trabalho');
+}
+function salvarEtapaTrabalho(){
+  const texto = document.getElementById('et-texto').value.trim();
   if(!texto) return;
-  db.ref(tarefaPath(area)+'/'+tid+'/subitens').push({titulo:texto, feita:false});
+  db.ref(tarefaPath(etapaArea)+'/'+etapaTarefaId+'/subitens').push({titulo:texto, feita:false});
+  closeModal('m-etapa-trabalho');
 }
 
 // ---------- ARRASTAR PARA REORDENAR ----------
@@ -944,11 +990,18 @@ function salvarVaga(){
   document.getElementById('vg-horario').value='';
   closeModal('m-vaga');
 }
+let vagaOcuparId = null;
 function ocuparVaga(id, status){
   if(status!=='livre') return;
-  const quem = prompt('Nome de quem escolheu esse horário:');
+  vagaOcuparId = id;
+  document.getElementById('vo-nome').value = '';
+  openModal('m-ocupar-vaga');
+}
+function confirmarOcuparVaga(){
+  const quem = document.getElementById('vo-nome').value.trim();
   if(!quem) return;
-  db.ref('vagas/'+id).update({status:'ocupado', ocupadoPor:quem});
+  db.ref('vagas/'+vagaOcuparId).update({status:'ocupado', ocupadoPor:quem});
+  closeModal('m-ocupar-vaga');
 }
 let vagasCache = {};
 db.ref('vagas').on('value', snap=>{
