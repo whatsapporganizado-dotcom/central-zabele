@@ -50,8 +50,11 @@
 
   .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;touch-action:pan-y;}
   .item.dragging{opacity:.85;box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:20;position:relative;}
-  .drag-handle{font-size:18px;color:var(--ink-soft);padding:0 6px 0 0;cursor:grab;touch-action:none;flex:0 0 auto;}
+  .drag-handle{font-size:18px;color:var(--ink-soft);padding:0 4px 0 0;cursor:grab;touch-action:none;flex:0 0 auto;}
   .item.dragging .drag-handle{cursor:grabbing;}
+  .move-btns{display:flex;flex-direction:column;flex:0 0 auto;}
+  .move-btns span{font-size:11px;line-height:1;padding:3px 5px;color:var(--ink-soft);cursor:pointer;}
+  .move-btns span:active{color:var(--wine);}
   .item .top{display:flex;align-items:flex-start;gap:10px;}
   .item .top input{margin-top:2px;}
   .item .title{font-size:14.5px;font-weight:600;flex:1;}
@@ -745,7 +748,7 @@ function renderizarTarefas(area, data){
     const prioLabel = {alta:'🔴 Alta', media:'🟡 Média', baixa:'⚪ Baixa'}[prio];
     const marcadoHoje = t.paraHojeData === hojeISO();
     html += `<div class="item ${t.feita?'done':''} ${marcadoHoje?'hoje-marcada':''}" data-id="${id}">
-      <div class="top"><span class="drag-handle">⠿</span><input type="checkbox" ${t.feita?'checked':''} onclick="toggleTarefa('${id}','${area}',${t.feita})">
+      <div class="top"><span class="drag-handle">⠿</span><span class="move-btns"><span onclick="moverTarefa('${id}','${area}','up')">▲</span><span onclick="moverTarefa('${id}','${area}','down')">▼</span></span><input type="checkbox" ${t.feita?'checked':''} onclick="toggleTarefa('${id}','${area}',${t.feita})">
       <div class="title">${t.titulo}</div>
       <span class="hoje-toggle ${marcadoHoje?'active':''}" onclick="toggleParaHoje('${id}','${area}',${marcadoHoje})" title="Marcar pra hoje">🎯</span>
       <span class="del" onclick="editarTarefa('${id}','${area}')" title="Editar">✏️</span>
@@ -753,8 +756,8 @@ function renderizarTarefas(area, data){
       <div><span class="tag ${prio}" style="cursor:pointer;" onclick="ciclarPrioridade('${id}','${area}','${prio}')">${prioLabel}</span>${tagHtml}</div>${subHtml}</div>`;
   });
   wrap.innerHTML = html;
-  habilitarArrastar(area==='saas' ? 'lista-tarefas-saas' : 'lista-tarefas', area);
   if(area==='zabele') atualizarPills();
+  habilitarArrastar(area==='saas' ? 'lista-tarefas-saas' : 'lista-tarefas', area);
   renderizarParaHoje();
 }
 db.ref('tarefas').on('value', snap=> renderizarTarefas('zabele', snap.val()));
@@ -781,7 +784,7 @@ function renderizarParaHoje(){
   }).forEach(([id,area,t])=>{
     const prio = t.prioridade || 'media';
     html2 += `<div class="item" data-id="${id}" data-area="${area}">
-      <div class="top"><span class="drag-handle">⠿</span><input type="checkbox" onclick="toggleTarefa('${id}','${area}',false)">
+      <div class="top"><span class="drag-handle">⠿</span><span class="move-btns"><span onclick="moverParaHoje('${id}','${area}','up')">▲</span><span onclick="moverParaHoje('${id}','${area}','down')">▼</span></span><input type="checkbox" onclick="toggleTarefa('${id}','${area}',false)">
       <div class="title">${t.titulo}</div>
       <span class="hoje-toggle active" onclick="toggleParaHoje('${id}','${area}',true)" title="Tirar de hoje">🎯</span></div>
       <div><span class="tag ${prio}">${prioLabelMap[prio]}</span></div></div>`;
@@ -825,6 +828,46 @@ function habilitarArrastarMisto(containerId){
       dragEl = null;
     };
   });
+}
+function moverTarefa(id, area, direcao){
+  const data = tarefasCache[area] || {};
+  const arr = Object.entries(data).sort((a,b)=>{
+    const oa = a[1].ordem !== undefined ? a[1].ordem : (a[1].criadoEm||0);
+    const ob = b[1].ordem !== undefined ? b[1].ordem : (b[1].criadoEm||0);
+    return ob-oa;
+  });
+  const idx = arr.findIndex(([eid])=>eid===id);
+  const alvoIdx = direcao==='up' ? idx-1 : idx+1;
+  if(idx<0 || alvoIdx<0 || alvoIdx>=arr.length) return;
+  const [id1,t1] = arr[idx];
+  const [id2,t2] = arr[alvoIdx];
+  const o1 = t1.ordem !== undefined ? t1.ordem : (t1.criadoEm||0);
+  const o2 = t2.ordem !== undefined ? t2.ordem : (t2.criadoEm||0);
+  db.ref(tarefaPath(area)+'/'+id1+'/ordem').set(o2);
+  db.ref(tarefaPath(area)+'/'+id2+'/ordem').set(o1);
+}
+function moverParaHoje(id, area, direcao){
+  const hoje = hojeISO();
+  let itens = [];
+  ['zabele','saas'].forEach(a=>{
+    Object.entries(tarefasCache[a]||{}).forEach(([eid,t])=>{
+      if(t.paraHojeData===hoje && !t.feita) itens.push([eid, a, t]);
+    });
+  });
+  itens.sort((a,b)=>{
+    const oa = a[2].ordemHoje !== undefined ? a[2].ordemHoje : (a[2].criadoEm||0);
+    const ob = b[2].ordemHoje !== undefined ? b[2].ordemHoje : (b[2].criadoEm||0);
+    return ob-oa;
+  });
+  const idx = itens.findIndex(([eid,a])=>eid===id && a===area);
+  const alvoIdx = direcao==='up' ? idx-1 : idx+1;
+  if(idx<0 || alvoIdx<0 || alvoIdx>=itens.length) return;
+  const [id1,a1,t1] = itens[idx];
+  const [id2,a2,t2] = itens[alvoIdx];
+  const o1 = t1.ordemHoje !== undefined ? t1.ordemHoje : (t1.criadoEm||0);
+  const o2 = t2.ordemHoje !== undefined ? t2.ordemHoje : (t2.criadoEm||0);
+  db.ref(tarefaPath(a1)+'/'+id1+'/ordemHoje').set(o2);
+  db.ref(tarefaPath(a2)+'/'+id2+'/ordemHoje').set(o1);
 }
 
 // ---------- CONTATOS ----------
