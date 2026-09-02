@@ -782,15 +782,57 @@ function renderizarParaHoje(){
   if(itens.length===0){ sec.innerHTML=''; return; }
   const prioLabelMap = {alta:'🔴 Alta', media:'🟡 Média', baixa:'⚪ Baixa'};
   let html2 = `<p class="eyebrow" style="margin-top:2px;">🎯 Pra hoje</p>`;
-  itens.sort((a,b)=>(a[2].criadoEm||0)-(b[2].criadoEm||0)).forEach(([id,area,t])=>{
+  itens.sort((a,b)=>{
+    const oa = a[2].ordemHoje !== undefined ? a[2].ordemHoje : (a[2].criadoEm||0);
+    const ob = b[2].ordemHoje !== undefined ? b[2].ordemHoje : (b[2].criadoEm||0);
+    return ob-oa;
+  }).forEach(([id,area,t])=>{
     const prio = t.prioridade || 'media';
-    html2 += `<div class="item">
-      <div class="top"><input type="checkbox" onclick="toggleTarefa('${id}','${area}',false)">
+    html2 += `<div class="item" data-id="${id}" data-area="${area}">
+      <div class="top"><span class="drag-handle">⠿</span><input type="checkbox" onclick="toggleTarefa('${id}','${area}',false)">
       <div class="title">${t.titulo}</div>
       <span class="hoje-toggle active" onclick="toggleParaHoje('${id}','${area}',true)" title="Tirar de hoje">🎯</span></div>
       <div><span class="tag ${prio}">${prioLabelMap[prio]}</span></div></div>`;
   });
   sec.innerHTML = html2;
+  habilitarArrastarMisto('secao-pra-hoje');
+}
+function habilitarArrastarMisto(containerId){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  let dragEl=null, startY=0;
+  container.querySelectorAll('.drag-handle').forEach(handle=>{
+    handle.ontouchstart = (e)=>{
+      dragEl = handle.closest('.item');
+      startY = e.touches[0].clientY;
+      dragEl.classList.add('dragging');
+    };
+  });
+  container.ontouchmove = (e)=>{
+    if(!dragEl) return;
+    e.preventDefault();
+    const y = e.touches[0].clientY;
+    dragEl.style.transform = `translateY(${y-startY}px)`;
+    const siblings = Array.from(container.children).filter(el=>el!==dragEl && el.classList.contains('item'));
+    for(const sib of siblings){
+      const rect = sib.getBoundingClientRect();
+      const meio = rect.top + rect.height/2;
+      const dragIndex = Array.from(container.children).indexOf(dragEl);
+      const sibIndex = Array.from(container.children).indexOf(sib);
+      if(y < meio && sibIndex < dragIndex){ container.insertBefore(dragEl, sib); startY=y; dragEl.style.transform=''; break; }
+      else if(y > meio && sibIndex > dragIndex){ container.insertBefore(dragEl, sib.nextSibling); startY=y; dragEl.style.transform=''; break; }
+    }
+  };
+  container.ontouchend = ()=>{
+    if(!dragEl) return;
+    dragEl.style.transform=''; dragEl.classList.remove('dragging');
+    const items = Array.from(container.children).filter(el=>el.classList.contains('item'));
+    const n = items.length;
+    items.forEach((el,i)=>{
+      db.ref(tarefaPath(el.dataset.area)+'/'+el.dataset.id+'/ordemHoje').set((n-i)*1000);
+    });
+    dragEl = null;
+  };
 }
 
 // ---------- CONTATOS ----------
