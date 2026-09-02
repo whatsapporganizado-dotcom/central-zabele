@@ -508,29 +508,21 @@ function habilitarArrastar(containerId, area){
     handle.onpointermove = (e)=>{
       if(!dragEl) return;
       e.preventDefault();
-      const y = e.clientY;
-      dragEl.style.transform = `translateY(${y-startY}px)`;
-      const siblings = Array.from(container.children).filter(el=>el!==dragEl && el.classList.contains('item'));
-      for(const sib of siblings){
-        const rect = sib.getBoundingClientRect();
-        const meio = rect.top + rect.height/2;
-        const dragIndex = Array.from(container.children).indexOf(dragEl);
-        const sibIndex = Array.from(container.children).indexOf(sib);
-        if(y < meio && sibIndex < dragIndex){
-          container.insertBefore(dragEl, sib);
-          startY = y; dragEl.style.transform='';
-          break;
-        } else if(y > meio && sibIndex > dragIndex){
-          container.insertBefore(dragEl, sib.nextSibling);
-          startY = y; dragEl.style.transform='';
-          break;
-        }
-      }
+      dragEl.style.transform = `translateY(${e.clientY-startY}px)`;
     };
-    handle.onpointerup = ()=>{
+    handle.onpointerup = (e)=>{
       if(!dragEl) return;
+      const y = e.clientY;
       dragEl.style.transform='';
       dragEl.classList.remove('dragging');
+      const siblings = Array.from(container.children).filter(el=>el!==dragEl && el.classList.contains('item'));
+      let alvo = null;
+      for(const sib of siblings){
+        const rect = sib.getBoundingClientRect();
+        if(y < rect.top + rect.height/2){ alvo = sib; break; }
+      }
+      if(alvo) container.insertBefore(dragEl, alvo);
+      else container.appendChild(dragEl);
       const ids = Array.from(container.children).filter(el=>el.classList.contains('item')).map(el=>el.dataset.id);
       const n = ids.length;
       ids.forEach((id,i)=>{ db.ref(tarefaPath(area)+'/'+id+'/ordem').set((n-i)*1000); });
@@ -811,21 +803,20 @@ function habilitarArrastarMisto(containerId){
     handle.onpointermove = (e)=>{
       if(!dragEl) return;
       e.preventDefault();
+      dragEl.style.transform = `translateY(${e.clientY-startY}px)`;
+    };
+    handle.onpointerup = (e)=>{
+      if(!dragEl) return;
       const y = e.clientY;
-      dragEl.style.transform = `translateY(${y-startY}px)`;
+      dragEl.style.transform=''; dragEl.classList.remove('dragging');
       const siblings = Array.from(container.children).filter(el=>el!==dragEl && el.classList.contains('item'));
+      let alvo = null;
       for(const sib of siblings){
         const rect = sib.getBoundingClientRect();
-        const meio = rect.top + rect.height/2;
-        const dragIndex = Array.from(container.children).indexOf(dragEl);
-        const sibIndex = Array.from(container.children).indexOf(sib);
-        if(y < meio && sibIndex < dragIndex){ container.insertBefore(dragEl, sib); startY=y; dragEl.style.transform=''; break; }
-        else if(y > meio && sibIndex > dragIndex){ container.insertBefore(dragEl, sib.nextSibling); startY=y; dragEl.style.transform=''; break; }
+        if(y < rect.top + rect.height/2){ alvo = sib; break; }
       }
-    };
-    handle.onpointerup = ()=>{
-      if(!dragEl) return;
-      dragEl.style.transform=''; dragEl.classList.remove('dragging');
+      if(alvo) container.insertBefore(dragEl, alvo);
+      else container.appendChild(dragEl);
       const items = Array.from(container.children).filter(el=>el.classList.contains('item'));
       const n = items.length;
       items.forEach((el,i)=>{
