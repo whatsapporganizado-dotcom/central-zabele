@@ -48,7 +48,9 @@
     padding:12px;font-size:13.5px;font-weight:600;color:var(--ink-soft);margin-bottom:14px;cursor:pointer;}
   .addbtn:active{background:var(--slate-soft);}
 
-  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;touch-action:pan-y;}
+  .item.dragging{opacity:.85;box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:20;position:relative;}
+  .drag-handle{font-size:18px;color:var(--ink-soft);padding:0 6px 0 0;cursor:grab;touch-action:none;flex:0 0 auto;}
   .item .top{display:flex;align-items:flex-start;gap:10px;}
   .item .top input{margin-top:2px;}
   .item .title{font-size:14.5px;font-weight:600;flex:1;}
@@ -203,7 +205,7 @@
     <div class="back" onclick="go('s-zabele')">‹ Zabelê</div>
     <h1>Tarefas & Trabalhos</h1>
     <p class="sub">Solta, com etapas, ou cronograma de evento</p>
-    <div class="addbtn" onclick="openModal('m-tarefa')">＋ Nova tarefa</div>
+    <div class="addbtn" onclick="abrirModalTarefa('zabele')">＋ Nova tarefa</div>
     <div id="lista-tarefas"><p class="empty">Nenhuma tarefa ainda</p></div>
   </div>
 
@@ -235,10 +237,18 @@
   <div class="screen" id="s-saas">
     <div class="back" onclick="go('s-hoje')">‹ Hoje</div>
     <p class="eyebrow">💻 Projetos SaaS</p>
-    <h1>Acompanhamento</h1>
-    <p class="sub">Bloco simples, sem pipeline</p>
-    <div class="addbtn" onclick="openModal('m-nota')">＋ Nova nota</div>
-    <div id="lista-notas"><p class="empty">Nenhuma nota ainda</p></div>
+    <h1>Tarefas & Trabalhos</h1>
+    <p class="sub">Mesmo formato do Zabelê</p>
+    <div class="addbtn" onclick="abrirModalTarefa('saas')">＋ Nova tarefa</div>
+    <div id="lista-tarefas-saas"><p class="empty">Nenhuma tarefa ainda</p></div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div class="screen" id="s-historico">
+    <div class="back" onclick="go('s-hoje')">‹ Hoje</div>
+    <h1>Histórico</h1>
+    <p class="sub">O que já foi feito, agrupado por assunto</p>
+    <div id="lista-historico"><p class="empty">Nada por aqui ainda</p></div>
   </div>
 
   <!-- HORARIOS LIVRES -->
@@ -255,6 +265,7 @@
   <div class="tab active" data-tab="s-hoje" onclick="go('s-hoje')"><span class="ti">🏠</span>Hoje</div>
   <div class="tab" data-tab="s-zabele" onclick="go('s-zabele')"><span class="ti">🎭</span>Zabelê</div>
   <div class="tab" data-tab="s-saas" onclick="go('s-saas')"><span class="ti">💻</span>SaaS</div>
+  <div class="tab" data-tab="s-historico" onclick="go('s-historico')"><span class="ti">📜</span>Histórico</div>
 </div>
 </div>
 
@@ -393,9 +404,10 @@ function go(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   const map = {'s-hoje':'s-hoje','s-zabele':'s-zabele','s-tarefas':'s-zabele','s-contatos':'s-zabele',
-    's-contato-detalhe':'s-zabele','s-vagas':'s-zabele','s-saas':'s-saas'};
+    's-contato-detalhe':'s-zabele','s-vagas':'s-zabele','s-saas':'s-saas','s-historico':'s-historico'};
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===map[id]));
   window.scrollTo(0,0);
+  if(id==='s-historico') renderizarHistorico();
 }
 function openModal(id){ document.getElementById(id).classList.add('active'); }
 function closeModal(id){ document.getElementById(id).classList.remove('active'); }
@@ -411,66 +423,123 @@ document.getElementById('hoje-data').textContent = hojeStr().replace(/^\w/,c=>c.
 
 // ---------- TAREFAS ----------
 function hojeISO(){ return new Date().toISOString().slice(0,10); }
+function tarefaPath(area){ return area==='saas' ? 'tarefasSaas' : 'tarefas'; }
+let modalTarefaArea = 'zabele';
+function abrirModalTarefa(area){ modalTarefaArea = area; openModal('m-tarefa'); }
 function salvarTarefa(){
   const titulo = document.getElementById('tf-titulo').value.trim();
   if(!titulo) return;
   const tipo = document.querySelector('input[name="tf-tipo"]:checked').value;
   const prioridade = document.querySelector('input[name="tf-prioridade"]:checked').value;
-  db.ref('tarefas').push({titulo, tipo, prioridade, feita:false, subitens:{}, criadoEm: Date.now()});
+  db.ref(tarefaPath(modalTarefaArea)).push({titulo, tipo, prioridade, feita:false, subitens:{}, criadoEm: Date.now(), ordem: Date.now()});
   document.getElementById('tf-titulo').value='';
   closeModal('m-tarefa');
 }
-function toggleTarefa(id, atual){ db.ref('tarefas/'+id+'/feita').set(!atual); }
+function toggleTarefa(id, area, atual){
+  db.ref(tarefaPath(area)+'/'+id+'/feita').set(!atual);
+  if(!atual){ db.ref(tarefaPath(area)+'/'+id+'/concluidoEm').set(Date.now()); }
+}
 const ORDEM_PRIO = ['alta','media','baixa'];
-function ciclarPrioridade(id, atual){
+function ciclarPrioridade(id, area, atual){
   const idx = ORDEM_PRIO.indexOf(atual);
   const prox = ORDEM_PRIO[(idx+1)%ORDEM_PRIO.length];
-  db.ref('tarefas/'+id+'/prioridade').set(prox);
+  db.ref(tarefaPath(area)+'/'+id+'/prioridade').set(prox);
 }
-function toggleParaHoje(id, marcadoHoje){
-  if(marcadoHoje){ db.ref('tarefas/'+id+'/paraHojeData').remove(); }
-  else{ db.ref('tarefas/'+id+'/paraHojeData').set(hojeISO()); }
+function toggleParaHoje(id, area, marcadoHoje){
+  if(marcadoHoje){ db.ref(tarefaPath(area)+'/'+id+'/paraHojeData').remove(); }
+  else{ db.ref(tarefaPath(area)+'/'+id+'/paraHojeData').set(hojeISO()); }
 }
-function apagarTarefa(id){
+function apagarTarefa(id, area){
   if(!confirm('Apagar essa tarefa (e as etapas dela, se tiver)? Não tem como desfazer.')) return;
-  db.ref('tarefas/'+id).remove();
+  db.ref(tarefaPath(area)+'/'+id).remove();
 }
-function editarTarefa(id){
-  const atual = (tarefasCache[id] && tarefasCache[id].titulo) || '';
+function editarTarefa(id, area){
+  const atual = (tarefasCache[area][id] && tarefasCache[area][id].titulo) || '';
   const novo = prompt('Editar título da tarefa:', atual);
   if(novo === null) return;
   const limpo = novo.trim();
   if(!limpo) return;
-  db.ref('tarefas/'+id+'/titulo').set(limpo);
+  db.ref(tarefaPath(area)+'/'+id+'/titulo').set(limpo);
 }
 function escapeHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-let notaTid = null, notaSid = null;
-function abrirNotaEtapa(tid, sid){
-  notaTid = tid; notaSid = sid;
-  const atual = (tarefasCache[tid] && tarefasCache[tid].subitens && tarefasCache[tid].subitens[sid] && tarefasCache[tid].subitens[sid].notas) || '';
+let notaTid = null, notaSid = null, notaArea = 'zabele';
+function abrirNotaEtapa(tid, sid, area){
+  notaTid = tid; notaSid = sid; notaArea = area;
+  const t = tarefasCache[area][tid];
+  const atual = (t && t.subitens && t.subitens[sid] && t.subitens[sid].notas) || '';
   document.getElementById('net-texto').value = atual;
   openModal('m-nota-etapa');
 }
 function salvarNotaEtapa(){
   const texto = document.getElementById('net-texto').value;
-  db.ref('tarefas/'+notaTid+'/subitens/'+notaSid+'/notas').set(texto);
+  db.ref(tarefaPath(notaArea)+'/'+notaTid+'/subitens/'+notaSid+'/notas').set(texto);
   closeModal('m-nota-etapa');
 }
-function toggleSub(tid, sid, atual){ db.ref('tarefas/'+tid+'/subitens/'+sid+'/feita').set(!atual); }
-let etapaTarefaId = null;
-function addEtapa(tid, tipo){
+function toggleSub(tid, area, sid, atual){ db.ref(tarefaPath(area)+'/'+tid+'/subitens/'+sid+'/feita').set(!atual); }
+let etapaTarefaId = null, etapaArea = 'zabele';
+function addEtapa(tid, area, tipo){
   if(tipo === 'evento'){
-    etapaTarefaId = tid;
+    etapaTarefaId = tid; etapaArea = area;
     ['ev-titulo','ev-data','ev-inicio','ev-fim'].forEach(i=>document.getElementById(i).value='');
     openModal('m-etapa-evento');
     return;
   }
   const texto = prompt('Descrição da etapa');
   if(!texto) return;
-  db.ref('tarefas/'+tid+'/subitens').push({titulo:texto, feita:false});
+  db.ref(tarefaPath(area)+'/'+tid+'/subitens').push({titulo:texto, feita:false});
 }
+
+// ---------- ARRASTAR PARA REORDENAR ----------
+function habilitarArrastar(containerId, area){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  let dragEl=null, startY=0, offsetAtual=0;
+
+  container.querySelectorAll('.drag-handle').forEach(handle=>{
+    handle.ontouchstart = (e)=>{
+      dragEl = handle.closest('.item');
+      startY = e.touches[0].clientY;
+      offsetAtual = 0;
+      dragEl.classList.add('dragging');
+    };
+  });
+  container.ontouchmove = (e)=>{
+    if(!dragEl) return;
+    e.preventDefault();
+    const y = e.touches[0].clientY;
+    offsetAtual = y - startY;
+    dragEl.style.transform = `translateY(${offsetAtual}px)`;
+    const siblings = Array.from(container.children).filter(el=>el!==dragEl && el.classList.contains('item'));
+    for(const sib of siblings){
+      const rect = sib.getBoundingClientRect();
+      const meio = rect.top + rect.height/2;
+      const dragIndex = Array.from(container.children).indexOf(dragEl);
+      const sibIndex = Array.from(container.children).indexOf(sib);
+      if(y < meio && sibIndex < dragIndex){
+        container.insertBefore(dragEl, sib);
+        startY = y; offsetAtual = 0; dragEl.style.transform='';
+        break;
+      } else if(y > meio && sibIndex > dragIndex){
+        container.insertBefore(dragEl, sib.nextSibling);
+        startY = y; offsetAtual = 0; dragEl.style.transform='';
+        break;
+      }
+    }
+  };
+  container.ontouchend = ()=>{
+    if(!dragEl) return;
+    dragEl.style.transform='';
+    dragEl.classList.remove('dragging');
+    const ids = Array.from(container.children).filter(el=>el.classList.contains('item')).map(el=>el.dataset.id);
+    const n = ids.length;
+    ids.forEach((id,i)=>{ db.ref(tarefaPath(area)+'/'+id+'/ordem').set((n-i)*1000); });
+    dragEl = null;
+  };
+}
+
+
 
 // ---------- GOOGLE AGENDA ----------
 const GOOGLE_CLIENT_ID = '999819851730-4n8f2cbbsn7gka68l5atcopfehmq4n4r.apps.googleusercontent.com';
@@ -615,7 +684,7 @@ function escolherLivre(dia, inicio, fim){
     document.getElementById('vg-horario').value = inicio+'h — '+fimEscolha+'h';
     openModal('m-vaga');
   } else {
-    go('s-tarefas');
+    go(etapaArea==='saas' ? 's-saas' : 's-tarefas');
     document.getElementById('ev-data').value = dia;
     document.getElementById('ev-inicio').value = inicio;
     document.getElementById('ev-fim').value = fimEscolha;
@@ -648,17 +717,21 @@ async function salvarEtapaEvento(){
   const label = `${dataFmt} ${inicio} — ${titulo}`;
   const novo = {titulo:label, feita:false, data, inicio, fim};
   if(googleEventId) novo.googleEventId = googleEventId;
-  db.ref('tarefas/'+etapaTarefaId+'/subitens').push(novo);
+  db.ref(tarefaPath(etapaArea)+'/'+etapaTarefaId+'/subitens').push(novo);
   closeModal('m-etapa-evento');
 }
-let tarefasCache = {};
-db.ref('tarefas').on('value', snap=>{
-  const wrap = document.getElementById('lista-tarefas');
-  const data = snap.val();
-  tarefasCache = data || {};
-  if(!data){ wrap.innerHTML = '<p class="empty">Nenhuma tarefa ainda</p>'; atualizarPills(); return; }
+let tarefasCache = {zabele:{}, saas:{}};
+function renderizarTarefas(area, data){
+  tarefasCache[area] = data || {};
+  const wrap = document.getElementById(area==='saas' ? 'lista-tarefas-saas' : 'lista-tarefas');
+  if(!wrap) return;
+  if(!data){ wrap.innerHTML = '<p class="empty">Nenhuma tarefa ainda</p>'; if(area==='zabele') atualizarPills(); renderizarParaHoje(); return; }
   let html='';
-  Object.entries(data).sort((a,b)=>(b[1].criadoEm||0)-(a[1].criadoEm||0)).forEach(([id,t])=>{
+  Object.entries(data).sort((a,b)=>{
+    const oa = a[1].ordem !== undefined ? a[1].ordem : (a[1].criadoEm||0);
+    const ob = b[1].ordem !== undefined ? b[1].ordem : (b[1].criadoEm||0);
+    return ob-oa;
+  }).forEach(([id,t])=>{
     const tagHtml = t.tipo==='trabalho' ? '<span class="tag trabalho">Trabalho com etapas</span>'
                    : t.tipo==='evento' ? '<span class="tag evento">Cronograma de evento</span>' : '';
     let subHtml='';
@@ -667,45 +740,54 @@ db.ref('tarefas').on('value', snap=>{
       if(t.subitens) Object.entries(t.subitens).forEach(([sid,s])=>{
         const temNota = s.notas && s.notas.trim().length>0;
         subHtml += `<div class="sub-item ${s.feita?'done':''}">
-          <input type="checkbox" ${s.feita?'checked':''} onclick="toggleSub('${id}','${sid}',${s.feita})">
+          <input type="checkbox" ${s.feita?'checked':''} onclick="toggleSub('${id}','${area}','${sid}',${s.feita})">
           <label style="flex:1;">${s.titulo}</label>
-          <span class="nota-btn ${temNota?'has':''}" onclick="abrirNotaEtapa('${id}','${sid}')" title="Anotações">📝</span></div>`;
+          <span class="nota-btn ${temNota?'has':''}" onclick="abrirNotaEtapa('${id}','${sid}','${area}')" title="Anotações">📝</span></div>`;
         if(temNota){
           subHtml += `<div class="nota-preview">${escapeHtml(s.notas).slice(0,90)}${s.notas.length>90?'…':''}</div>`;
         }
       });
-      subHtml += `<div class="add-step" onclick="addEtapa('${id}','${t.tipo}')">＋ adicionar etapa</div></div>`;
+      subHtml += `<div class="add-step" onclick="addEtapa('${id}','${area}','${t.tipo}')">＋ adicionar etapa</div></div>`;
     }
     const prio = t.prioridade || 'media';
     const prioLabel = {alta:'🔴 Alta', media:'🟡 Média', baixa:'⚪ Baixa'}[prio];
     const marcadoHoje = t.paraHojeData === hojeISO();
-    html += `<div class="item ${t.feita?'done':''} ${marcadoHoje?'hoje-marcada':''}">
-      <div class="top"><input type="checkbox" ${t.feita?'checked':''} onclick="toggleTarefa('${id}',${t.feita})">
+    html += `<div class="item ${t.feita?'done':''} ${marcadoHoje?'hoje-marcada':''}" data-id="${id}">
+      <div class="top"><span class="drag-handle">⠿</span><input type="checkbox" ${t.feita?'checked':''} onclick="toggleTarefa('${id}','${area}',${t.feita})">
       <div class="title">${t.titulo}</div>
-      <span class="hoje-toggle ${marcadoHoje?'active':''}" onclick="toggleParaHoje('${id}',${marcadoHoje})" title="Marcar pra hoje">🎯</span>
-      <span class="del" onclick="editarTarefa('${id}')" title="Editar">✏️</span>
-      <span class="del" onclick="apagarTarefa('${id}')">🗑️</span></div>
-      <div><span class="tag ${prio}" style="cursor:pointer;" onclick="ciclarPrioridade('${id}','${prio}')">${prioLabel}</span>${tagHtml}</div>${subHtml}</div>`;
+      <span class="hoje-toggle ${marcadoHoje?'active':''}" onclick="toggleParaHoje('${id}','${area}',${marcadoHoje})" title="Marcar pra hoje">🎯</span>
+      <span class="del" onclick="editarTarefa('${id}','${area}')" title="Editar">✏️</span>
+      <span class="del" onclick="apagarTarefa('${id}','${area}')">🗑️</span></div>
+      <div><span class="tag ${prio}" style="cursor:pointer;" onclick="ciclarPrioridade('${id}','${area}','${prio}')">${prioLabel}</span>${tagHtml}</div>${subHtml}</div>`;
   });
   wrap.innerHTML = html;
-  atualizarPills();
-  renderizarParaHoje(data);
-});
+  habilitarArrastar(area==='saas' ? 'lista-tarefas-saas' : 'lista-tarefas', area);
+  if(area==='zabele') atualizarPills();
+  renderizarParaHoje();
+}
+db.ref('tarefas').on('value', snap=> renderizarTarefas('zabele', snap.val()));
+db.ref('tarefasSaas').on('value', snap=> renderizarTarefas('saas', snap.val()));
 
-function renderizarParaHoje(data){
+function renderizarParaHoje(){
   const sec = document.getElementById('secao-pra-hoje');
   if(!sec) return;
   const hoje = hojeISO();
-  const itens = data ? Object.entries(data).filter(([id,t])=>t.paraHojeData===hoje && !t.feita) : [];
+  let itens = [];
+  ['zabele','saas'].forEach(area=>{
+    const data = tarefasCache[area] || {};
+    Object.entries(data).forEach(([id,t])=>{
+      if(t.paraHojeData===hoje && !t.feita) itens.push([id, area, t]);
+    });
+  });
   if(itens.length===0){ sec.innerHTML=''; return; }
   const prioLabelMap = {alta:'🔴 Alta', media:'🟡 Média', baixa:'⚪ Baixa'};
   let html2 = `<p class="eyebrow" style="margin-top:2px;">🎯 Pra hoje</p>`;
-  itens.sort((a,b)=>(a[1].criadoEm||0)-(b[1].criadoEm||0)).forEach(([id,t])=>{
+  itens.sort((a,b)=>(a[2].criadoEm||0)-(b[2].criadoEm||0)).forEach(([id,area,t])=>{
     const prio = t.prioridade || 'media';
     html2 += `<div class="item">
-      <div class="top"><input type="checkbox" onclick="toggleTarefa('${id}',false)">
+      <div class="top"><input type="checkbox" onclick="toggleTarefa('${id}','${area}',false)">
       <div class="title">${t.titulo}</div>
-      <span class="hoje-toggle active" onclick="toggleParaHoje('${id}',true)" title="Tirar de hoje">🎯</span></div>
+      <span class="hoje-toggle active" onclick="toggleParaHoje('${id}','${area}',true)" title="Tirar de hoje">🎯</span></div>
       <div><span class="tag ${prio}">${prioLabelMap[prio]}</span></div></div>`;
   });
   sec.innerHTML = html2;
@@ -752,9 +834,11 @@ function addTimeline(){
   db.ref('contatos/'+contatoAtualId+'/timeline').push({data:hojeCurta(), texto:val});
   document.getElementById('tl-novo').value='';
 }
+let contatosCache = {};
 db.ref('contatos').on('value', snap=>{
   const wrap = document.getElementById('lista-contatos');
   const data = snap.val();
+  contatosCache = data || {};
   if(!data){ wrap.innerHTML = '<p class="empty">Nenhum contato ainda</p>'; atualizarPills(); return; }
   let html='';
   Object.entries(data).sort((a,b)=>(b[1].criadoEm||0)-(a[1].criadoEm||0)).forEach(([id,c])=>{
@@ -781,9 +865,11 @@ function ocuparVaga(id, status){
   if(!quem) return;
   db.ref('vagas/'+id).update({status:'ocupado', ocupadoPor:quem});
 }
+let vagasCache = {};
 db.ref('vagas').on('value', snap=>{
   const wrap = document.getElementById('lista-vagas');
   const data = snap.val();
+  vagasCache = data || {};
   if(!data){ wrap.innerHTML = '<p class="empty">Nenhuma vaga ainda</p>'; atualizarPills(); return; }
   let html='';
   Object.entries(data).sort((a,b)=>(a[1].data>b[1].data?1:-1)).forEach(([id,v])=>{
@@ -817,18 +903,62 @@ db.ref('saasNotas').on('value', snap=>{
 
 // ---------- pills "Hoje" ----------
 function atualizarPills(){
-  db.ref('tarefas').once('value', s=>{
-    let n=0; s.forEach(c=>{ if(!c.val().feita) n++; });
-    document.getElementById('pill-tarefas').textContent = n+' tarefa'+(n===1?'':'s')+' pendente'+(n===1?'':'s');
+  let n=0;
+  Object.values(tarefasCache.zabele||{}).forEach(t=>{ if(!t.feita) n++; });
+  Object.values(tarefasCache.saas||{}).forEach(t=>{ if(!t.feita) n++; });
+  document.getElementById('pill-tarefas').textContent = n+' tarefa'+(n===1?'':'s')+' pendente'+(n===1?'':'s');
+
+  let nc=0;
+  Object.values(contatosCache).forEach(c=>{ if(c.fase==='novo') nc++; });
+  document.getElementById('pill-contatos').textContent = nc+' contato'+(nc===1?'':'s')+' novo'+(nc===1?'':'s');
+
+  let nv=0;
+  Object.values(vagasCache).forEach(v=>{ if(v.status==='livre') nv++; });
+  document.getElementById('pill-vagas').textContent = nv+' vaga'+(nv===1?'':'s')+' livre'+(nv===1?'':'s');
+}
+
+// ---------- HISTÓRICO ----------
+function renderizarHistorico(){
+  const wrap = document.getElementById('lista-historico');
+  let html = '';
+
+  // Tarefas concluídas (zabele + saas)
+  let tarefasFeitas = [];
+  ['zabele','saas'].forEach(area=>{
+    Object.entries(tarefasCache[area]||{}).forEach(([id,t])=>{
+      if(t.feita) tarefasFeitas.push({titulo:t.titulo, area, quando:t.concluidoEm||t.criadoEm||0});
+    });
   });
-  db.ref('contatos').once('value', s=>{
-    let n=0; s.forEach(c=>{ if(c.val().fase==='novo') n++; });
-    document.getElementById('pill-contatos').textContent = n+' contato'+(n===1?'':'s')+' novo'+(n===1?'':'s');
-  });
-  db.ref('vagas').once('value', s=>{
-    let n=0; s.forEach(c=>{ if(c.val().status==='livre') n++; });
-    document.getElementById('pill-vagas').textContent = n+' vaga'+(n===1?'':'s')+' livre'+(n===1?'':'s');
-  });
+  if(tarefasFeitas.length){
+    tarefasFeitas.sort((a,b)=>b.quando-a.quando);
+    html += `<p class="eyebrow" style="margin-top:2px;">✅ Tarefas concluídas</p>`;
+    tarefasFeitas.forEach(t=>{
+      const dataFmt = t.quando ? new Date(t.quando).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) : '';
+      html += `<div class="note"><div class="d">${dataFmt} · ${t.area==='saas'?'SaaS':'Zabelê'}</div><div class="t">${escapeHtml(t.titulo)}</div></div>`;
+    });
+  }
+
+  // Contatos que evoluíram (fase diferente de "novo")
+  let contatosEvoluidos = Object.entries(contatosCache).filter(([id,c])=>c.fase && c.fase!=='novo');
+  if(contatosEvoluidos.length){
+    html += `<p class="eyebrow" style="margin-top:18px;">👤 Contatos</p>`;
+    const stageLbl = {exp:'Experimental marcada', mat:'Matriculou'};
+    contatosEvoluidos.sort((a,b)=>(b[1].criadoEm||0)-(a[1].criadoEm||0)).forEach(([id,c])=>{
+      html += `<div class="note"><div class="d">${stageLbl[c.fase]||c.fase}</div><div class="t">${escapeHtml(c.nome)}</div></div>`;
+    });
+  }
+
+  // Vagas preenchidas
+  let vagasPreenchidas = Object.entries(vagasCache).filter(([id,v])=>v.status && v.status!=='livre');
+  if(vagasPreenchidas.length){
+    html += `<p class="eyebrow" style="margin-top:18px;">🗓️ Vagas preenchidas</p>`;
+    vagasPreenchidas.sort((a,b)=>(a[1].data>b[1].data?-1:1)).forEach(([id,v])=>{
+      const dataFmt = new Date(v.data+'T00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+      html += `<div class="note"><div class="d">${dataFmt} · ${v.horario}</div><div class="t">Ocupado por ${escapeHtml(v.ocupadoPor||'')}</div></div>`;
+    });
+  }
+
+  wrap.innerHTML = html || '<p class="empty">Nada por aqui ainda</p>';
 }
 </script>
 </body>
