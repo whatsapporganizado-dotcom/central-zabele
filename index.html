@@ -617,26 +617,46 @@ const CALENDARS = {
 let accessToken = null;
 let tokenClient = null;
 
-function connectGoogle(){
-  if(typeof google === 'undefined' || !google.accounts){
-    alert('O Google ainda está carregando, tenta de novo em 1 segundo.');
-    return;
-  }
+function marcarGoogleConectado(){
+  localStorage.setItem('googleConectado','true');
+  const el = document.getElementById('google-status');
+  el.textContent = '✅ Google Agenda conectado';
+  el.onclick = null;
+  el.style.cursor = 'default';
+}
+function garantirTokenClient(callback){
   if(!tokenClient){
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
       scope: 'https://www.googleapis.com/auth/calendar.events',
       callback: (resp)=>{
-        if(resp.error){ alert('Não foi possível conectar ao Google: '+resp.error); return; }
+        if(resp.error){ if(callback) callback(false); return; }
         accessToken = resp.access_token;
-        const el = document.getElementById('google-status');
-        el.textContent = '✅ Google Agenda conectado';
-        el.onclick = null;
-        el.style.cursor = 'default';
+        marcarGoogleConectado();
+        if(callback) callback(true);
       }
     });
   }
+}
+function connectGoogle(){
+  if(typeof google === 'undefined' || !google.accounts){
+    alert('O Google ainda está carregando, tenta de novo em 1 segundo.');
+    return;
+  }
+  garantirTokenClient();
   tokenClient.requestAccessToken();
+}
+function tentarReconexaoSilenciosa(tentativas){
+  tentativas = tentativas || 0;
+  if(typeof google === 'undefined' || !google.accounts){
+    if(tentativas < 15) setTimeout(()=>tentarReconexaoSilenciosa(tentativas+1), 300);
+    return;
+  }
+  garantirTokenClient();
+  tokenClient.requestAccessToken({prompt:''});
+}
+if(localStorage.getItem('googleConectado')==='true'){
+  tentarReconexaoSilenciosa();
 }
 
 async function checarConflito(startISO, endISO){
