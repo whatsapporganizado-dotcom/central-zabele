@@ -17,6 +17,7 @@
     --sage:#4F7A55; --sage-soft:#E3EDE4;
     --amber:#9C6B1F; --amber-soft:#F4E8D3;
     --line:#E2E5EA; --card:#FFFFFF;
+    --wine-tint:#FBF2F1; --amber-tint:#FBF6EC; --slate-tint:#F5F6F8;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body{margin:0;background:var(--paper);color:var(--ink);
@@ -49,8 +50,11 @@
     padding:12px;font-size:13.5px;font-weight:600;color:var(--ink-soft);margin-bottom:14px;cursor:pointer;}
   .addbtn:active{background:var(--slate-soft);}
 
-  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;touch-action:pan-y;}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;touch-action:pan-y;cursor:pointer;}
   .item.dragging{opacity:.85;box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:20;position:relative;}
+  .item.prio-alta{background:var(--wine-tint);}
+  .item.prio-media{background:var(--amber-tint);}
+  .item.prio-baixa{background:var(--slate-tint);}
   .drag-handle{font-size:18px;color:var(--ink-soft);padding:0 4px 0 0;cursor:grab;touch-action:none;flex:0 0 auto;}
   .item.dragging .drag-handle{cursor:grabbing;}
   .move-btns{display:flex;flex-direction:column;flex:0 0 auto;}
@@ -61,6 +65,7 @@
   .item .title{font-size:14.5px;font-weight:600;flex:1;}
   .item .del{font-size:16px;color:var(--ink-soft);padding:2px 4px;cursor:pointer;flex:0 0 auto;}
   .item.done .title{color:var(--ink-soft);text-decoration:line-through;}
+  .card-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);}
   .sub-items{margin:8px 0 0 26px;border-left:2px solid var(--line);padding-left:12px;}
   .sub-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;}
   .sub-item.done label{color:var(--ink-soft);text-decoration:line-through;}
@@ -600,6 +605,10 @@ function salvarEdicaoTarefa(){
   db.ref(tarefaPath(editarTarefaAreaAtual)+'/'+editarTarefaId+'/titulo').set(novo);
   closeModal('m-editar-tarefa');
 }
+function clickCard(e, id, area){
+  if(e.target.closest('input, .del, .hoje-toggle, .tag, .drag-handle, .sub-items, .add-step, .move-btns')) return;
+  editarTarefa(id, area);
+}
 function escapeHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -1006,13 +1015,15 @@ function renderizarTarefas(area, data){
     const prioLabel = {alta:'🔴 Alta', media:'🟡 Média', baixa:'⚪ Baixa'}[prio];
     const marcadoHoje = t.paraHojeData === hojeISO();
     const postitClass = isDesktopFree() ? 'postit' : '';
-    html += `<div class="item ${postitClass} ${t.feita?'done':''} ${marcadoHoje?'hoje-marcada':''}" data-id="${id}" data-area="${area}">
+    html += `<div class="item ${postitClass} prio-${prio} ${t.feita?'done':''} ${marcadoHoje?'hoje-marcada':''}" data-id="${id}" data-area="${area}" onclick="clickCard(event,'${id}','${area}')">
       <div class="top"><span class="drag-handle">⠿</span><span class="move-btns"><span onclick="moverTarefa('${id}','${area}','up')">▲</span><span onclick="moverTarefa('${id}','${area}','down')">▼</span></span><input type="checkbox" ${t.feita?'checked':''} onclick="toggleTarefa('${id}','${area}',${t.feita})">
-      <div class="title">${t.titulo}</div>
-      <span class="hoje-toggle ${marcadoHoje?'active':''}" onclick="toggleParaHoje('${id}','${area}',${marcadoHoje})" title="Marcar pra hoje">🎯</span>
-      <span class="del" onclick="editarTarefa('${id}','${area}')" title="Editar">✏️</span>
-      <span class="del" onclick="apagarTarefa('${id}','${area}')">🗑️</span></div>
-      <div><span class="tag ${prio}" style="cursor:pointer;" onclick="ciclarPrioridade('${id}','${area}','${prio}')">${prioLabel}</span>${tagHtml}</div>${subHtml}</div>`;
+      <div class="title">${t.titulo}</div></div>
+      <div><span class="tag ${prio}" style="cursor:pointer;" onclick="ciclarPrioridade('${id}','${area}','${prio}')">${prioLabel}</span>${tagHtml}</div>${subHtml}
+      <div class="card-actions">
+        <span class="hoje-toggle ${marcadoHoje?'active':''}" onclick="toggleParaHoje('${id}','${area}',${marcadoHoje})" title="Marcar pra hoje">🎯</span>
+        <span class="del" onclick="editarTarefa('${id}','${area}')" title="Editar">✏️</span>
+        <span class="del" onclick="apagarTarefa('${id}','${area}')" title="Apagar">🗑️</span>
+      </div></div>`;
   });
   wrap.innerHTML = html;
   if(area==='zabele') atualizarPills();
@@ -1050,11 +1061,13 @@ function renderizarParaHoje(){
     return ob-oa;
   }).forEach(([id,area,t])=>{
     const prio = t.prioridade || 'media';
-    html2 += `<div class="item ${postitClass}" data-id="${id}" data-area="${area}">
+    html2 += `<div class="item ${postitClass} prio-${prio}" data-id="${id}" data-area="${area}" onclick="clickCard(event,'${id}','${area}')">
       <div class="top"><span class="drag-handle">⠿</span><span class="move-btns"><span onclick="moverParaHoje('${id}','${area}','up')">▲</span><span onclick="moverParaHoje('${id}','${area}','down')">▼</span></span><input type="checkbox" onclick="toggleTarefa('${id}','${area}',false)">
-      <div class="title">${t.titulo}</div>
-      <span class="hoje-toggle active" onclick="toggleParaHoje('${id}','${area}',true)" title="Tirar de hoje">🎯</span></div>
-      <div><span class="tag ${prio}">${prioLabelMap[prio]}</span></div></div>`;
+      <div class="title">${t.titulo}</div></div>
+      <div><span class="tag ${prio}">${prioLabelMap[prio]}</span></div>
+      <div class="card-actions">
+        <span class="hoje-toggle active" onclick="toggleParaHoje('${id}','${area}',true)" title="Tirar de hoje">🎯</span>
+      </div></div>`;
   });
   board.innerHTML = html2;
   if(isDesktopFree()){
