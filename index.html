@@ -11,13 +11,12 @@
 <title>Central Zabelê</title>
 <style>
   :root{
-    --paper:#AEB3BD; --ink:#20242B; --ink-soft:#666e7a; --field-bg:#F2F3F5;
+    --paper:#F6F4F0; --ink:#20242B; --ink-soft:#666e7a; --field-bg:#F3F2EC;
     --wine:#7C2D2D; --wine-soft:#F1E3E1;
     --slate:#33415C; --slate-soft:#E1E6EE;
     --sage:#4F7A55; --sage-soft:#E3EDE4;
     --amber:#9C6B1F; --amber-soft:#F4E8D3;
-    --line:#E2E5EA; --card:#FFFFFF;
-    --wine-tint:#FBF2F1; --amber-tint:#FBF6EC; --slate-tint:#F5F6F8;
+    --line:#ECEAE4; --card:#FFFFFF;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body{margin:0;background:var(--paper);color:var(--ink);
@@ -29,32 +28,32 @@
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
   .eyebrow{font-size:13px;color:var(--ink-soft);margin:0 0 4px;}
-  h1{font-family:Georgia,serif;font-size:23px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em;}
+  h1{font-family:Georgia,serif;font-size:23px;font-weight:500;margin:0 0 4px;letter-spacing:-0.01em;}
   .sub{font-size:13px;color:var(--ink-soft);margin:0 0 16px;}
   .back{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-soft);margin-bottom:12px;cursor:pointer;width:fit-content;}
 
   .pill-row{display:flex;gap:8px;overflow-x:auto;margin-bottom:18px;}
   .pill{flex:0 0 auto;background:var(--card);border:1px solid var(--line);border-radius:10px;
-    padding:8px 12px;font-size:12.5px;display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;}
+    padding:8px 12px;font-size:12.5px;display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);}
   .pill .dot{width:7px;height:7px;border-radius:50%;}
 
-  .block{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:11px;cursor:pointer;}
+  .block{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:11px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);}
   .block .row{display:flex;align-items:center;gap:12px;}
   .block .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
-  .block .name{font-size:15px;font-weight:600;}
+  .block .name{font-size:15px;font-weight:500;}
   .block .desc{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
   .block .chev{margin-left:auto;color:var(--ink-soft);}
 
   .addbtn{display:flex;align-items:center;justify-content:center;gap:6px;
     background:var(--card);border:1px dashed var(--line);border-radius:12px;
-    padding:12px;font-size:13.5px;font-weight:600;color:var(--ink-soft);margin-bottom:14px;cursor:pointer;}
+    padding:12px;font-size:13.5px;font-weight:500;color:var(--ink-soft);margin-bottom:14px;cursor:pointer;}
   .addbtn:active{background:var(--slate-soft);}
 
-  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;touch-action:pan-y;cursor:pointer;}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;touch-action:pan-y;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);}
   .item.dragging{opacity:.85;box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:20;position:relative;}
-  .item.prio-alta{background:var(--wine-tint);}
-  .item.prio-media{background:var(--amber-tint);}
-  .item.prio-baixa{background:var(--slate-tint);}
+  .item.prio-alta{border-left:3px solid var(--wine);}
+  .item.prio-media{border-left:3px solid var(--amber);}
+  .item.prio-baixa{border-left:3px solid var(--slate);}
   .drag-handle{font-size:18px;color:var(--ink-soft);padding:0 4px 0 0;cursor:grab;touch-action:none;flex:0 0 auto;}
   .item.dragging .drag-handle{cursor:grabbing;}
   .move-btns{display:flex;flex-direction:column;flex:0 0 auto;}
@@ -62,7 +61,7 @@
   .move-btns span:active{color:var(--wine);}
   .item .top{display:flex;align-items:flex-start;gap:10px;}
   .item .top input{margin-top:2px;}
-  .item .title{font-size:14.5px;font-weight:600;flex:1;}
+  .item .title{font-size:14.5px;font-weight:500;flex:1;}
   .item .del{font-size:16px;color:var(--ink-soft);padding:2px 4px;cursor:pointer;flex:0 0 auto;}
   .item.done .title{color:var(--ink-soft);text-decoration:line-through;}
   .card-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);}
@@ -72,8 +71,8 @@
   .nota-btn{opacity:.3;cursor:pointer;flex:0 0 auto;font-size:14px;}
   .nota-btn.has{opacity:1;}
   .nota-preview{font-size:11.5px;color:var(--ink-soft);margin:-2px 0 6px 26px;white-space:pre-wrap;}
-  .add-step{font-size:12px;color:var(--slate);font-weight:600;margin-top:6px;cursor:pointer;}
-  .tag{display:inline-block;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;margin-top:6px;}
+  .add-step{font-size:12px;color:var(--slate);font-weight:500;margin-top:6px;cursor:pointer;}
+  .tag{display:inline-block;font-size:11px;font-weight:500;padding:3px 8px;border-radius:6px;margin-top:6px;}
   .tag.evento{background:var(--amber-soft);color:var(--amber);}
   .tag.trabalho{background:var(--slate-soft);color:var(--slate);}
   .tag.alta{background:var(--wine-soft);color:var(--wine);}
@@ -83,21 +82,21 @@
   .hoje-toggle{font-size:16px;padding:2px 4px;cursor:pointer;flex:0 0 auto;opacity:.3;}
   .hoje-toggle.active{opacity:1;}
 
-  .contact{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+  .contact{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);}
   .avatar{width:38px;height:38px;border-radius:50%;background:var(--wine-soft);color:var(--wine);
-    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:0 0 auto;}
+    display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex:0 0 auto;}
   .contact .info{flex:1;min-width:0;}
-  .contact .cname{font-size:14.5px;font-weight:600;}
-  .stage{display:inline-block;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;margin-top:4px;}
+  .contact .cname{font-size:14.5px;font-weight:500;}
+  .stage{display:inline-block;font-size:11px;font-weight:500;padding:3px 8px;border-radius:6px;margin-top:4px;}
   .stage.novo{background:var(--amber-soft);color:var(--amber);}
   .stage.exp{background:var(--slate-soft);color:var(--slate);}
   .stage.mat{background:var(--sage-soft);color:var(--sage);}
 
-  .detail-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;}
+  .detail-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
   .detail-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
   .detail-head .avatar{width:50px;height:50px;font-size:18px;}
   .wa-btn{display:inline-flex;align-items:center;gap:6px;background:var(--sage-soft);color:var(--sage);
-    font-size:13px;font-weight:600;padding:9px 14px;border-radius:10px;margin-top:6px;text-decoration:none;}
+    font-size:13px;font-weight:500;padding:9px 14px;border-radius:10px;margin-top:6px;text-decoration:none;}
   .timeline{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;}
   .tl-item{display:flex;gap:10px;padding:8px 0;font-size:13px;}
   .tl-date{color:var(--ink-soft);font-size:11.5px;min-width:44px;flex:0 0 auto;}
@@ -105,28 +104,28 @@
   .tl-add input{flex:1;}
 
   .slot{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:9px;
-    display:flex;align-items:center;gap:12px;cursor:pointer;transition:opacity .15s;}
-  .slot .day{font-size:14px;font-weight:600;min-width:78px;}
+    display:flex;align-items:center;gap:12px;cursor:pointer;transition:opacity .15s;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+  .slot .day{font-size:14px;font-weight:500;min-width:78px;}
   .slot .time{font-size:13px;color:var(--ink-soft);flex:1;}
-  .slot .st{font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:6px;white-space:nowrap;}
+  .slot .st{font-size:11.5px;font-weight:500;padding:4px 9px;border-radius:6px;white-space:nowrap;}
   .slot .st.livre{background:var(--sage-soft);color:var(--sage);}
   .slot .st.ocupado{background:#EDEEF1;color:var(--ink-soft);}
   .slot.taken{opacity:.55;}
 
-  .note{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:9px;}
+  .note{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:9px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
   .note .d{font-size:11.5px;color:var(--ink-soft);margin-bottom:4px;}
   .note .t{font-size:14px;}
 
   .empty{font-size:13px;color:var(--ink-soft);text-align:center;padding:24px 10px;}
   .day-block{margin-bottom:18px;}
-  .day-title{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:8px;text-transform:capitalize;}
-  .see-free{font-size:12.5px;font-weight:600;color:var(--slate);margin-top:4px;cursor:pointer;}
+  .day-title{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:8px;text-transform:capitalize;}
+  .see-free{font-size:12.5px;font-weight:500;color:var(--slate);margin-top:4px;cursor:pointer;}
 
   .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;
     background:var(--card);border-top:1px solid var(--line);display:flex;padding:10px 8px calc(18px + env(safe-area-inset-bottom));}
   .tab{flex:1;text-align:center;font-size:11.5px;color:var(--ink-soft);cursor:pointer;padding:4px;}
   .tab .ti{font-size:19px;display:block;margin-bottom:2px;}
-  .tab.active{color:var(--wine);font-weight:600;}
+  .tab.active{color:var(--wine);font-weight:500;}
 
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(20,22,26,.4);display:none;align-items:flex-end;z-index:50;}
@@ -135,17 +134,20 @@
     padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:80vh;overflow-y:auto;}
   .sheet h3{font-family:Georgia,serif;font-size:18px;margin:0 0 14px;}
   .field{margin-bottom:12px;}
-  .field label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:600;}
+  .field label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:500;}
   .field input, .field select, .field textarea{
     width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 11px;font-size:14px;font-family:inherit;background:var(--field-bg);}
   .field textarea{resize:vertical;min-height:60px;}
   .radiorow{display:flex;gap:8px;}
-  .radiorow label{flex:1;border:1px solid var(--line);border-radius:9px;padding:9px;text-align:center;font-size:12.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+  .radiorow label{flex:1;border:1px solid var(--line);border-radius:9px;padding:9px;text-align:center;font-size:12.5px;font-weight:500;color:var(--ink-soft);cursor:pointer;}
   .radiorow input{display:none;}
   .radiorow input:checked + span{color:var(--wine);}
   .radiorow label:has(input:checked){border-color:var(--wine);background:var(--wine-soft);}
+  .nota-campo{margin-bottom:12px;}
+  .nota-campo-add{font-size:12px;color:var(--slate);font-weight:500;cursor:pointer;}
+  .nota-remove{font-size:11px;color:var(--ink-soft);margin-top:4px;cursor:pointer;text-align:right;}
   .sheet-actions{display:flex;gap:10px;margin-top:16px;}
-  .btn{flex:1;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn{flex:1;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;}
   .btn.primary{background:var(--wine);color:#fff;}
   .btn.ghost{background:var(--field-bg);color:var(--ink-soft);}
 
@@ -429,6 +431,43 @@
   <div class="sheet">
     <h3>Editar tarefa</h3>
     <div class="field"><label>Título</label><textarea id="et2-texto" style="min-height:90px;"></textarea></div>
+
+    <div class="nota-campo" id="campo-link">
+      <div class="nota-campo-add" onclick="mostrarCampoNota('link')">＋ adicionar link ou caminho</div>
+      <div class="field nota-campo-body" style="display:none;">
+        <label>🔗 Link ou caminho</label>
+        <input id="et2-link" placeholder="Ex: link do Google Drive">
+        <div class="nota-remove" onclick="limparCampoNota('link')">remover</div>
+      </div>
+    </div>
+
+    <div class="nota-campo" id="campo-rascunho">
+      <div class="nota-campo-add" onclick="mostrarCampoNota('rascunho')">＋ adicionar rascunho de WhatsApp</div>
+      <div class="field nota-campo-body" style="display:none;">
+        <label>💬 Rascunho de WhatsApp</label>
+        <textarea id="et2-rascunho" placeholder="Mensagem pronta pra copiar depois"></textarea>
+        <div class="nota-remove" onclick="limparCampoNota('rascunho')">remover</div>
+      </div>
+    </div>
+
+    <div class="nota-campo" id="campo-imagem">
+      <div class="nota-campo-add" onclick="mostrarCampoNota('imagem')">＋ adicionar link de imagem</div>
+      <div class="field nota-campo-body" style="display:none;">
+        <label>🖼️ Link da imagem</label>
+        <input id="et2-imagem" placeholder="Ex: link da foto no Google Fotos">
+        <div class="nota-remove" onclick="limparCampoNota('imagem')">remover</div>
+      </div>
+    </div>
+
+    <div class="nota-campo" id="campo-anotacao">
+      <div class="nota-campo-add" onclick="mostrarCampoNota('anotacao')">＋ adicionar anotação</div>
+      <div class="field nota-campo-body" style="display:none;">
+        <label>📝 Anotação</label>
+        <textarea id="et2-anotacao" style="min-height:100px;" placeholder="Escreva à vontade"></textarea>
+        <div class="nota-remove" onclick="limparCampoNota('anotacao')">remover</div>
+      </div>
+    </div>
+
     <div class="sheet-actions">
       <button class="btn ghost" onclick="closeModal('m-editar-tarefa')">Cancelar</button>
       <button class="btn primary" onclick="salvarEdicaoTarefa()">Salvar</button>
@@ -596,16 +635,46 @@ function apagarTarefa(id, area){
   db.ref(tarefaPath(area)+'/'+id).remove();
 }
 let editarTarefaId=null, editarTarefaAreaAtual=null;
+const NOTA_CAMPOS = {
+  link: {input:'et2-link', field:'notaLink'},
+  rascunho: {input:'et2-rascunho', field:'notaRascunho'},
+  imagem: {input:'et2-imagem', field:'notaImagem'},
+  anotacao: {input:'et2-anotacao', field:'notaTexto'}
+};
+function mostrarCampoNota(tipo){
+  const campo = document.getElementById('campo-'+tipo);
+  campo.querySelector('.nota-campo-add').style.display = 'none';
+  campo.querySelector('.nota-campo-body').style.display = 'block';
+}
+function limparCampoNota(tipo){
+  const cfg = NOTA_CAMPOS[tipo];
+  document.getElementById(cfg.input).value = '';
+  const campo = document.getElementById('campo-'+tipo);
+  campo.querySelector('.nota-campo-body').style.display = 'none';
+  campo.querySelector('.nota-campo-add').style.display = 'block';
+}
 function editarTarefa(id, area){
   editarTarefaId = id; editarTarefaAreaAtual = area;
-  const atual = (tarefasCache[area][id] && tarefasCache[area][id].titulo) || '';
-  document.getElementById('et2-texto').value = atual;
+  const t = tarefasCache[area][id] || {};
+  document.getElementById('et2-texto').value = t.titulo || '';
+  Object.entries(NOTA_CAMPOS).forEach(([tipo, cfg])=>{
+    const val = t[cfg.field] || '';
+    document.getElementById(cfg.input).value = val;
+    const campo = document.getElementById('campo-'+tipo);
+    campo.querySelector('.nota-campo-add').style.display = val ? 'none' : 'block';
+    campo.querySelector('.nota-campo-body').style.display = val ? 'block' : 'none';
+  });
   openModal('m-editar-tarefa');
 }
 function salvarEdicaoTarefa(){
   const novo = document.getElementById('et2-texto').value.trim();
   if(!novo) return;
-  db.ref(tarefaPath(editarTarefaAreaAtual)+'/'+editarTarefaId+'/titulo').set(novo);
+  const updates = { titulo: novo };
+  Object.values(NOTA_CAMPOS).forEach(cfg=>{
+    const val = document.getElementById(cfg.input).value.trim();
+    updates[cfg.field] = val || null;
+  });
+  db.ref(tarefaPath(editarTarefaAreaAtual)+'/'+editarTarefaId).update(updates);
   closeModal('m-editar-tarefa');
 }
 function clickCard(e, id, area){
@@ -912,7 +981,7 @@ async function carregarSemanaLivre(){
     if(gaps.length===0) html += `<p class="empty" style="padding:6px 0;">Sem horário livre nesse dia</p>`;
     gaps.forEach(g=>{
       html += `<div class="slot" onclick="escolherLivre('${diaStr}','${g.inicio}','${g.fim}')">
-        <div class="time" style="flex:1;font-weight:600;color:var(--ink);">${g.inicio} — ${g.fim}</div><span class="st livre">Livre</span></div>`;
+        <div class="time" style="flex:1;font-weight:500;color:var(--ink);">${g.inicio} — ${g.fim}</div><span class="st livre">Livre</span></div>`;
     });
     doDia.forEach(e=>{
       html += `<div class="slot taken"><div class="time" style="flex:1">${e.inicio}–${e.fim} · ${e.titulo}</div><span class="st ocupado">Ocupado</span></div>`;
@@ -973,7 +1042,7 @@ function renderizarTarefas(area, data){
   tarefasCache[area] = data || {};
   const wrap = document.getElementById(area==='saas' ? 'lista-tarefas-saas' : 'lista-tarefas');
   if(!wrap) return;
-  if(!data){ wrap.innerHTML = '<p class="empty">Nenhuma tarefa ainda</p>'; if(area==='zabele') atualizarPills(); renderizarParaHoje(); return; }
+  if(!data){ wrap.innerHTML = '<p class="empty">Nenhuma tarefa ainda</p>'; wrap.style.height=''; if(area==='zabele') atualizarPills(); renderizarParaHoje(); return; }
   let html='';
   Object.entries(data).sort((a,b)=>{
     const oa = a[1].ordem !== undefined ? a[1].ordem : (a[1].criadoEm||0);
@@ -1022,6 +1091,7 @@ function renderizarTarefas(area, data){
       savePos:(id,ar,col,ordem)=>{ db.ref(tarefaPath(ar)+'/'+id+'/col').set(col); db.ref(tarefaPath(ar)+'/'+id+'/ordem').set(ordem); }
     });
   } else {
+    wrap.style.height = '';
     habilitarArrastar(area==='saas' ? 'lista-tarefas-saas' : 'lista-tarefas', area);
   }
   renderizarParaHoje();
@@ -1040,7 +1110,7 @@ function renderizarParaHoje(){
       if(t.paraHojeData===hoje && !t.feita) itens.push([id, area, t]);
     });
   });
-  if(itens.length===0){ board.innerHTML='<p class="empty">Nada marcado pra hoje ainda</p>'; return; }
+  if(itens.length===0){ board.innerHTML='<p class="empty">Nada marcado pra hoje ainda</p>'; board.style.height=''; return; }
   const prioLabelMap = {alta:'🔴 Alta', media:'🟡 Média', baixa:'⚪ Baixa'};
   const postitClass = isDesktopFree() ? 'postit' : '';
   let html2 = '';
@@ -1068,6 +1138,7 @@ function renderizarParaHoje(){
       savePos:(id,ar,col,ordem)=>{ db.ref(tarefaPath(ar)+'/'+id+'/colHoje').set(col); db.ref(tarefaPath(ar)+'/'+id+'/ordemHoje').set(ordem); }
     });
   } else {
+    board.style.height = '';
     habilitarArrastarMisto('board-hoje');
   }
 }
@@ -1176,7 +1247,7 @@ function abrirContato(id, c){
   });
   document.getElementById('contato-detalhe-body').innerHTML = `
     <div class="detail-head"><div class="avatar">${inicial}</div>
-      <div><div class="cname" style="font-size:16px;font-weight:600;">${c.nome}</div>
+      <div><div class="cname" style="font-size:16px;font-weight:500;">${c.nome}</div>
       <span class="stage ${c.fase}">${stageLabel[c.fase]}</span></div></div>
     <a class="wa-btn" href="${waLink}" target="_blank">💬 Abrir conversa no WhatsApp</a>
     <div class="see-free" onclick="abrirAgendarContato()">📅 Agendar aula no Google Agenda</div>
