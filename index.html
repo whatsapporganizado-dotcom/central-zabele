@@ -175,6 +175,12 @@
   .screen{ padding:32px 36px 10px; }
   .overlay{ align-items:center; }
   .sheet{ border-radius:18px; max-width:460px; margin:0 auto; }
+
+  /* quadro de post-its (arrastar livre, só telas largas) */
+  .board-wrap{ position:relative; }
+  .item.postit{ position:absolute; width:260px; margin:0; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .item.postit .move-btns{ display:none; }
+  .item.postit.dragging{ z-index:30; box-shadow:0 10px 26px rgba(0,0,0,.22); }
 }
 </style>
 </head>
@@ -192,7 +198,13 @@
       <div class="pill" onclick="go('s-contatos')"><span class="dot" style="background:var(--amber)"></span> <span id="pill-contatos">0 contatos novos</span></div>
       <div class="pill" onclick="go('s-vagas')"><span class="dot" style="background:var(--sage)"></span> <span id="pill-vagas">0 vagas livres</span></div>
     </div>
-    <div id="secao-pra-hoje"></div>
+    <div id="secao-pra-hoje">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px;">
+        <p class="eyebrow" style="margin:0;">🎯 Pra hoje</p>
+        <span class="add-step" onclick="abrirModalTarefaHoje()">＋ nova tarefa</span>
+      </div>
+      <div id="board-hoje"><p class="empty">Nada marcado pra hoje ainda</p></div>
+    </div>
     <div class="block" onclick="go('s-zabele')">
       <div class="row">
         <div class="ic" style="background:var(--wine-soft)">🎭</div>
@@ -309,6 +321,12 @@
   <div class="sheet">
     <h3>Nova tarefa</h3>
     <div class="field"><label>Título</label><input id="tf-titulo" placeholder="Ex: Atualizar app da cantina"></div>
+    <div class="field"><label>Área</label>
+      <div class="radiorow">
+        <label><input type="radio" name="tf-area" value="zabele" checked><span>🎭 Zabelê</span></label>
+        <label><input type="radio" name="tf-area" value="saas"><span>💻 SaaS</span></label>
+      </div>
+    </div>
     <div class="field"><label>Tipo</label>
       <div class="radiorow">
         <label><input type="radio" name="tf-tipo" value="solta" checked><span>Solta</span></label>
@@ -512,14 +530,31 @@ document.getElementById('hoje-data').textContent = hojeStr().replace(/^\w/,c=>c.
 function hojeISO(){ return new Date().toISOString().slice(0,10); }
 function tarefaPath(area){ return area==='saas' ? 'tarefasSaas' : 'tarefas'; }
 let modalTarefaArea = 'zabele';
-function abrirModalTarefa(area){ modalTarefaArea = area; openModal('m-tarefa'); }
+let modalTarefaDeHoje = false;
+function abrirModalTarefa(area){
+  modalTarefaArea = area;
+  modalTarefaDeHoje = false;
+  const radio = document.querySelector('input[name="tf-area"][value="'+area+'"]');
+  if(radio) radio.checked = true;
+  openModal('m-tarefa');
+}
+function abrirModalTarefaHoje(){
+  modalTarefaDeHoje = true;
+  const radio = document.querySelector('input[name="tf-area"][value="zabele"]');
+  if(radio) radio.checked = true;
+  openModal('m-tarefa');
+}
 function salvarTarefa(){
   const titulo = document.getElementById('tf-titulo').value.trim();
   if(!titulo) return;
+  const area = document.querySelector('input[name="tf-area"]:checked').value;
   const tipo = document.querySelector('input[name="tf-tipo"]:checked').value;
   const prioridade = document.querySelector('input[name="tf-prioridade"]:checked').value;
-  db.ref(tarefaPath(modalTarefaArea)).push({titulo, tipo, prioridade, feita:false, subitens:{}, criadoEm: Date.now(), ordem: Date.now()});
+  const novo = {titulo, tipo, prioridade, feita:false, subitens:{}, criadoEm: Date.now(), ordem: Date.now()};
+  if(modalTarefaDeHoje){ novo.paraHojeData = hojeISO(); novo.ordemHoje = Date.now(); }
+  db.ref(tarefaPath(area)).push(novo);
   document.getElementById('tf-titulo').value='';
+  modalTarefaDeHoje = false;
   closeModal('m-tarefa');
 }
 function toggleTarefa(id, area, atual){
@@ -635,7 +670,105 @@ function habilitarArrastar(containerId, area){
   });
 }
 
+// ---------- QUADRO POST-IT (arrastar livre, só telas largas / PC) ----------
+function isDesktopFree(){ return window.innerWidth >= 860; }
+const POSTIT_W = 260, POSTIT_GAP = 14, POSTIT_DEFAULT_H = 90;
 
+function resolveOverlapsPostit(els, pinnedIds){
+  pinnedIds = pinnedIds || new Set();
+  for(let pass=0; pass<40; pass++){
+    let mudou=false;
+    for(let i=0;i<els.length;i++){
+      for(let j=0;j<els.length;j++){
+        if(i===j) continue;
+        const a=els[i], b=els[j];
+        const sobX = a.x < b.x+b.w && b.x < a.x+a.w;
+        const sobY = a.y < b.y+b.h && b.y < a.y+a.h;
+        if(sobX && sobY){
+          const aPin = pinnedIds.has(a.id), bPin = pinnedIds.has(b.id);
+          let mover, fixo;
+          if(aPin && !bPin){ mover=b; fixo=a; }
+          else if(bPin && !aPin){ mover=a; fixo=b; }
+          else if(a.y>=b.y){ mover=a; fixo=b; }
+          else { mover=b; fixo=a; }
+          mover.y = fixo.y + fixo.h + POSTIT_GAP;
+          mudou = true;
+        }
+      }
+    }
+    if(!mudou) break;
+  }
+}
+
+function aplicarPostit(containerId, itens, opts){
+  const container = document.getElementById(containerId);
+  if(!container || !isDesktopFree()) return;
+  container.classList.add('board-wrap');
+  const els = itens.map(it=>({
+    id: it.id, area: it.area,
+    x: it.x, y: it.y,
+    el: container.querySelector('.item[data-id="'+it.id+'"]'+(it.area?'[data-area="'+it.area+'"]':''))
+  })).filter(o=>o.el);
+
+  els.forEach(o=>{
+    o.w = POSTIT_W;
+    o.h = o.el.offsetHeight || POSTIT_DEFAULT_H;
+    o.origX = o.x; o.origY = o.y;
+    if(o.x==null || o.y==null){ o.x = 16; o.y = 16; o.novo = true; }
+  });
+  const pinNovos = new Set(els.filter(o=>o.novo).map(o=>o.id));
+  resolveOverlapsPostit(els, pinNovos);
+  els.forEach(o=>{
+    o.el.style.left = o.x+'px';
+    o.el.style.top = o.y+'px';
+    if(o.novo || o.x!==o.origX || o.y!==o.origY) opts.savePos(o.id, o.area, o.x, o.y);
+  });
+  let maxBottom = 20;
+  els.forEach(o=>{ maxBottom = Math.max(maxBottom, o.y+o.h+20); });
+  container.style.height = maxBottom+'px';
+
+  els.forEach(o=>{
+    const handle = o.el.querySelector('.drag-handle');
+    if(!handle) return;
+    let startX, startY, origX, origY, moveu;
+    handle.onpointerdown = (e)=>{
+      startX=e.clientX; startY=e.clientY; origX=o.x; origY=o.y; moveu=false;
+      o.el.classList.add('dragging');
+      handle.setPointerCapture(e.pointerId);
+    };
+    handle.onpointermove = (e)=>{
+      if(startX===undefined) return;
+      e.preventDefault();
+      const dx=e.clientX-startX, dy=e.clientY-startY;
+      if(Math.abs(dx)>3 || Math.abs(dy)>3) moveu=true;
+      o.x = Math.max(0, origX+dx);
+      o.y = Math.max(0, origY+dy);
+      o.el.style.left = o.x+'px';
+      o.el.style.top = o.y+'px';
+    };
+    handle.onpointerup = ()=>{
+      if(startX===undefined) return;
+      startX=undefined;
+      o.el.classList.remove('dragging');
+      if(moveu){
+        resolveOverlapsPostit(els, new Set([o.id]));
+        let mb = 20;
+        els.forEach(oo=>{
+          oo.el.style.left = oo.x+'px';
+          oo.el.style.top = oo.y+'px';
+          opts.savePos(oo.id, oo.area, oo.x, oo.y);
+          mb = Math.max(mb, oo.y+oo.h+20);
+        });
+        container.style.height = mb+'px';
+      }
+    };
+  });
+}
+
+window.addEventListener('resize', ()=>{
+  renderizarTarefas('zabele', tarefasCache.zabele);
+  renderizarTarefas('saas', tarefasCache.saas);
+});
 
 // ---------- GOOGLE AGENDA ----------
 const GOOGLE_CLIENT_ID = '999819851730-4n8f2cbbsn7gka68l5atcopfehmq4n4r.apps.googleusercontent.com';
@@ -868,7 +1001,8 @@ function renderizarTarefas(area, data){
     const prio = t.prioridade || 'media';
     const prioLabel = {alta:'🔴 Alta', media:'🟡 Média', baixa:'⚪ Baixa'}[prio];
     const marcadoHoje = t.paraHojeData === hojeISO();
-    html += `<div class="item ${t.feita?'done':''} ${marcadoHoje?'hoje-marcada':''}" data-id="${id}">
+    const postitClass = isDesktopFree() ? 'postit' : '';
+    html += `<div class="item ${postitClass} ${t.feita?'done':''} ${marcadoHoje?'hoje-marcada':''}" data-id="${id}" data-area="${area}">
       <div class="top"><span class="drag-handle">⠿</span><span class="move-btns"><span onclick="moverTarefa('${id}','${area}','up')">▲</span><span onclick="moverTarefa('${id}','${area}','down')">▼</span></span><input type="checkbox" ${t.feita?'checked':''} onclick="toggleTarefa('${id}','${area}',${t.feita})">
       <div class="title">${t.titulo}</div>
       <span class="hoje-toggle ${marcadoHoje?'active':''}" onclick="toggleParaHoje('${id}','${area}',${marcadoHoje})" title="Marcar pra hoje">🎯</span>
@@ -878,15 +1012,22 @@ function renderizarTarefas(area, data){
   });
   wrap.innerHTML = html;
   if(area==='zabele') atualizarPills();
-  habilitarArrastar(area==='saas' ? 'lista-tarefas-saas' : 'lista-tarefas', area);
+  if(isDesktopFree()){
+    const itensPos = Object.entries(data).map(([id,t])=>({id, area, x:t.posX, y:t.posY}));
+    aplicarPostit(area==='saas' ? 'lista-tarefas-saas' : 'lista-tarefas', itensPos, {
+      savePos:(id,ar,x,y)=>{ db.ref(tarefaPath(ar)+'/'+id+'/posX').set(x); db.ref(tarefaPath(ar)+'/'+id+'/posY').set(y); }
+    });
+  } else {
+    habilitarArrastar(area==='saas' ? 'lista-tarefas-saas' : 'lista-tarefas', area);
+  }
   renderizarParaHoje();
 }
 db.ref('tarefas').on('value', snap=> renderizarTarefas('zabele', snap.val()));
 db.ref('tarefasSaas').on('value', snap=> renderizarTarefas('saas', snap.val()));
 
 function renderizarParaHoje(){
-  const sec = document.getElementById('secao-pra-hoje');
-  if(!sec) return;
+  const board = document.getElementById('board-hoje');
+  if(!board) return;
   const hoje = hojeISO();
   let itens = [];
   ['zabele','saas'].forEach(area=>{
@@ -895,23 +1036,31 @@ function renderizarParaHoje(){
       if(t.paraHojeData===hoje && !t.feita) itens.push([id, area, t]);
     });
   });
-  if(itens.length===0){ sec.innerHTML=''; return; }
+  if(itens.length===0){ board.innerHTML='<p class="empty">Nada marcado pra hoje ainda</p>'; return; }
   const prioLabelMap = {alta:'🔴 Alta', media:'🟡 Média', baixa:'⚪ Baixa'};
-  let html2 = `<p class="eyebrow" style="margin-top:2px;">🎯 Pra hoje</p>`;
+  const postitClass = isDesktopFree() ? 'postit' : '';
+  let html2 = '';
   itens.sort((a,b)=>{
     const oa = a[2].ordemHoje !== undefined ? a[2].ordemHoje : (a[2].criadoEm||0);
     const ob = b[2].ordemHoje !== undefined ? b[2].ordemHoje : (b[2].criadoEm||0);
     return ob-oa;
   }).forEach(([id,area,t])=>{
     const prio = t.prioridade || 'media';
-    html2 += `<div class="item" data-id="${id}" data-area="${area}">
+    html2 += `<div class="item ${postitClass}" data-id="${id}" data-area="${area}">
       <div class="top"><span class="drag-handle">⠿</span><span class="move-btns"><span onclick="moverParaHoje('${id}','${area}','up')">▲</span><span onclick="moverParaHoje('${id}','${area}','down')">▼</span></span><input type="checkbox" onclick="toggleTarefa('${id}','${area}',false)">
       <div class="title">${t.titulo}</div>
       <span class="hoje-toggle active" onclick="toggleParaHoje('${id}','${area}',true)" title="Tirar de hoje">🎯</span></div>
       <div><span class="tag ${prio}">${prioLabelMap[prio]}</span></div></div>`;
   });
-  sec.innerHTML = html2;
-  habilitarArrastarMisto('secao-pra-hoje');
+  board.innerHTML = html2;
+  if(isDesktopFree()){
+    const itensPos = itens.map(([id,area,t])=>({id, area, x:t.posXHoje, y:t.posYHoje}));
+    aplicarPostit('board-hoje', itensPos, {
+      savePos:(id,ar,x,y)=>{ db.ref(tarefaPath(ar)+'/'+id+'/posXHoje').set(x); db.ref(tarefaPath(ar)+'/'+id+'/posYHoje').set(y); }
+    });
+  } else {
+    habilitarArrastarMisto('board-hoje');
+  }
 }
 function habilitarArrastarMisto(containerId){
   const container = document.getElementById(containerId);
